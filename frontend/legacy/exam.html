@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>个性化诊断问卷</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="card wide-card">
+  <div id="loading">正在加载问卷……</div>
+
+  <div id="exam" hidden>
+    <h1 id="exam-title"></h1>
+    <p id="attempt-banner" class="banner" hidden></p>
+    <form id="exam-form"></form>
+    <div class="actions">
+      <button type="button" class="primary" id="submit-btn">提交问卷</button>
+    </div>
+    <p id="submit-error" class="error" hidden></p>
+    <p class="muted small">答案会自动在本地暂存，刷新页面不会丢失草稿。</p>
+  </div>
+
+  <div id="done" hidden>
+    <h1>✅ 提交成功</h1>
+    <p id="done-detail"></p>
+    <p class="muted">你的回答已记录。教师/助教会查看诊断结果，如需重新作答可刷新页面再次提交，最新一次提交为准。</p>
+  </div>
+</main>
+<script>
+const params = new URLSearchParams(location.search);
+const sid = (params.get('student_id') || '').trim();
+const draftKey = 'exam_draft_' + sid;
+
+const loadingEl = document.getElementById('loading');
+const examEl = document.getElementById('exam');
+const doneEl = document.getElementById('done');
+const formEl = document.getElementById('exam-form');
+const errorEl = document.getElementById('submit-error');
+
+let exam = null;
+
+init();
+
+async function init() {
+  if (!sid) { showErrorPage('缺少 student_id 参数，请从首页进入'); return; }
+  try {
+    const res = await fetch('/api/exam/' + encodeURIComponent(sid));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { showErrorPage(data.detail || ('加载失败 ' + res.status)); return; }
+    exam = data;
+    renderExam();
+  } catch (e) {
+    showErrorPage('网络错误，无法加载问卷');
+  }
+}
+
+function showErrorPage(msg) {
+  loadingEl.textContent = msg;
+}
+
+function renderExam() {
+  loadingEl.hidden = true;
+  examEl.hidden = false;
+  document.getElementById('exam-title').textContent =
+    (exam.course || '') + ' · ' + (exam.title || '个性化诊断问卷');
+  if (exam.attempt_count > 0) {
+    const b = document.getElementById('attempt-banner');
+    b.textContent = '你之前已提交过 ' + exam.attempt_count + ' 次，可重新作答，最新一次为准。';
+    b.hidden = false;
+  }
+  const draft = JSON.parse(localStorage.getItem(draftKey) || '{}');
+
+  exam.questions.forEach((q, idx) => {
+    const block = document.createElement('div');
+    block.className = 'question';
+    const title = document.createElement('p');
+    title.className = 'question-title';
+    title.textContent = (idx + 1) + '. ' + q.question +
+      (q.type === 'multiple_choice' ? '（多选）' : '');
+    block.appendChild(title);
+
+    if (q.type === 'text') {
+      const ta = document.createElement('textarea');
+      ta.rows = 4;
+      ta.dataset.qid = q.id;
+      ta.value = draft[q.id] || '';
+      ta.addEventListener('input', saveDraft);
+      block.appendChild(ta);
+    } else {
+      const isMulti = q.type === 'multiple_choice';
+      q.choices.forEach((choice, i) => {
+        const letter = String.fromCharCode(65 + i);
+        const label = document.createElement('label');
+        label.className = 'choice';
+        const input = document.createElement('input');
+        input.type = isMulti ? 'checkbox' : 'radio';
+        input.name = q.id;
+        input.value = letter;
+        input.addEventListener('change', saveDraft);
+        const span = document.createElement('span');
+        span.textContent = letter + '. ' + choice;
+        label.appendChild(input);
+        label.appendChild(span);
+        block.appendChild(label);
+      });
+      // 恢复草稿选中状态
+      const saved = draft[q.id];
+      if (saved !== undefined) {
+        const values = Array.isArray(saved) ? saved : [saved];
+        block.querySelectorAll('input').forEach(inp => {
+          if (values.includes(inp.value)) inp.checked = true;
+        });
+      }
+    }
+    formEl.appendChild(block);
+  });
+
+  document.getElementById('submit-btn').addEventListener('click', submit);
+}
+
+function collectAnswers() {
+  const answers = {};
+  exam.questions.forEach(q => {
+    if (q.type === 'text') {
+      answers[q.id] = formEl.querySelector('textarea[data-qid="' + q.id + '"]').value.trim();
+    } else if (q.type === 'multiple_choice') {
+      answers[q.id] = Array.from(formEl.querySelectorAll('input[name="' + q.id + '"]:checked'))
+        .map(i => i.value);
+    } else {
+      const checked = formEl.querySelector('input[name="' + q.id + '"]:checked');
+      answers[q.id] = checked ? checked.value : '';
+    }
+  });
+  return answers;
+}
+
+function saveDraft() {
+  if (!exam) return;
+  localStorage.setItem(draftKey, JSON.stringify(collectAnswers()));
+}
+
+async function submit() {
+  errorEl.hidden = true;
+  const answers = collectAnswers();
+  const unanswered = exam.questions.filter(q => {
+    const a = answers[q.id];
+    return a === '' || (Array.isArray(a) && a.length === 0);
+  });
+  if (unanswered.length && !confirm('还有 ' + unanswered.length + ' 道题未作答，确定提交吗？')) {
+    return;
+  }
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = '提交中……';
+  try {
+    const res = await fetch('/api/exam/' + encodeURIComponent(sid) + '/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      errorEl.textContent = data.detail || ('提交失败 ' + res.status);
+      errorEl.hidden = false;
+      btn.disabled = false;
+      btn.textContent = '提交问卷';
+      return;
+    }
+    localStorage.removeItem(draftKey);
+    examEl.hidden = true;
+    doneEl.hidden = false;
+    document.getElementById('done-detail').textContent =
+      '第 ' + data.attempt + ' 次提交已记录（' + new Date(data.submitted_at).toLocaleString() + '）。';
+  } catch (e) {
+    errorEl.textContent = '网络错误，提交失败，请重试（草稿已保留）';
+    errorEl.hidden = false;
+    btn.disabled = false;
+    btn.textContent = '提交问卷';
+  }
+}
+</script>
+</body>
+</html>

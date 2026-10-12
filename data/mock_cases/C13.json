@@ -1,0 +1,259 @@
+{
+  "case_id": "C13",
+  "title": "循环只到 n-2：最后元素未检查",
+  "assignment_id": "c-find-max",
+  "case_version": 1,
+  "review_status": "reviewed",
+  "code": "int find_max(int arr[], int n) {\n    int max = arr[0];\n    for (int i = 1; i < n - 1; i++) {\n        if (arr[i] > max) {\n            max = arr[i];\n        }\n    }\n    return max;\n}",
+  "code_quality": "incorrect",
+  "behavior_notes": "初值与比较方向正确，但循环条件是 $i < n-1$：最后一个元素 `arr[n-1]` 从未参与比较，最大值位于末位时结果错误（如 `[2, 5, 9]` 返回 5）。不会越界，是典型的“差一个”边界遗漏。",
+  "verification_points": [
+    "loop-boundary",
+    "failing-input",
+    "test-design"
+  ],
+  "input_coverage": [
+    "最大值在末位",
+    "最大值不在末位（碰巧正确）",
+    "长度1（循环不执行）",
+    "长度2"
+  ],
+  "diagnosis": {
+    "summary": "初值与比较方向正确，但循环条件 $i < n-1$ 使最后一个元素 `arr[n-1]` 从未参与比较：最大值位于末位（如 `[2, 5, 9]`）时返回 5 而不是 9。这是“差一个”（off-by-one）边界遗漏，不会越界。",
+    "issues": [
+      {
+        "type": "incomplete-traversal",
+        "description": "循环条件 $i < n-1$ 少检查最后一个元素，最大值位于 `arr[n-1]` 时结果错误",
+        "evidence": "for (int i = 1; i < n - 1; i++) 输入 [2, 5, 9] 时返回 5",
+        "severity": "high",
+        "description_en": "The condition $i < n - 1$ skips the last element; inputs with the maximum at the end return a wrong result."
+      }
+    ],
+    "summary_en": "The condition $i < n - 1$ skips the last element, so inputs whose maximum sits at the end fail. The questionnaire focuses on off-by-one boundaries and test design."
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single_choice",
+      "question": "输入 `[2, 5, 9]`（$n$ = 3）时，你的程序返回什么？",
+      "choices": [
+        "5",
+        "9",
+        "2",
+        "未定义"
+      ],
+      "target_issue": "failing-input",
+      "target_zh": "失效输入",
+      "expected_answer": "A",
+      "code_lines": [
+        3
+      ],
+      "question_en": "For the input `[2, 5, 9]` (n = 3), what does your program return?",
+      "target_en": "failing input",
+      "choices_en": [
+        "5",
+        "9",
+        "2",
+        "Undefined"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single_choice",
+      "question": "哪些输入会暴露这个程序的错误？",
+      "choices": [
+        "最大值恰好位于最后一个元素的数组",
+        "最大值位于第一个元素的数组",
+        "所有输入都会出错",
+        "只有全部元素为负数的数组"
+      ],
+      "target_issue": "loop-boundary",
+      "target_zh": "循环边界",
+      "expected_answer": "A",
+      "code_lines": [
+        3
+      ],
+      "question_en": "Which inputs expose the defect of this program?",
+      "target_en": "loop boundary",
+      "choices_en": [
+        "Arrays whose maximum happens to be the last element",
+        "Arrays whose maximum is the first element",
+        "Every input fails",
+        "Only all-negative arrays"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "single_choice",
+      "question": "循环条件 $i < n - 1$ 与 $i < n$ 的本质差别是什么？",
+      "choices": [
+        "前者使 `arr[n-1]` 不参与比较，少覆盖一个合法元素",
+        "两者完全等价",
+        "前者会少检查 `arr[0]`",
+        "前者会访问 `arr[n]` 造成越界"
+      ],
+      "target_issue": "loop-boundary",
+      "target_zh": "循环边界",
+      "expected_answer": "A",
+      "code_lines": [
+        3
+      ],
+      "question_en": "What is the essential difference between the conditions $i < n - 1$ and $i < n$?",
+      "target_en": "loop boundary",
+      "choices_en": [
+        "The former excludes `arr[n-1]` from comparisons, covering one valid element fewer",
+        "They are fully equivalent",
+        "The former checks `arr[0]` one time fewer",
+        "The former reads `arr[n]` out of bounds"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "question": "这类“差一个”的循环边界错误为什么在随手测试中容易漏掉？应当怎样构造测试输入？",
+      "target_issue": "test-design",
+      "target_zh": "测试构造",
+      "expected_answer": "只有当最大值位于最后一个元素时才出错；随机或随手写的数组往往最大值不在末位，恰好掩盖错误。应当专门构造最大值在末位（以及首位、中间）的用例来覆盖边界。",
+      "code_lines": [
+        3
+      ],
+      "samples": [
+        {
+          "verdict": "correct",
+          "variants": [
+            "只有当最大值位于最后一个元素时才出错；随机或随手写的数组往往最大值不在末位，恰好掩盖错误。应当专门构造最大值在末位（以及首位、中间）的用例来覆盖边界。",
+            "因为错误只在最大值恰好排最后时出现，随手测试很难碰到；需要专门构造最大值在末位的输入。",
+            "失效条件太窄：最大值不在末位时结果碰巧正确；测试要刻意把最大值放到末位。"
+          ],
+          "note": "理解了失效条件狭窄性并给出针对性测试构造",
+          "note_en": "Understood the narrowness of the failure condition and provided a targeted test construction"
+        },
+        {
+          "verdict": "partial",
+          "variants": [
+            "因为不一定出错，要看输入。",
+            "有些输入碰巧对。"
+          ],
+          "note": "意识到输入依赖，但没有给出针对性构造方法",
+          "note_en": "Recognized the input dependence, but did not provide a targeted construction method"
+        },
+        {
+          "verdict": "wrong",
+          "variants": [
+            "这个错误任何测试都能立刻发现。",
+            "程序对所有输入都返回错误结果，不可能漏掉。"
+          ],
+          "note": "没有意识到失效条件的输入依赖性",
+          "note_en": "Failed to recognize the input dependence of the failure condition"
+        },
+        {
+          "verdict": "insufficient",
+          "variants": [
+            "不知道",
+            "没想过测试",
+            "不清楚"
+          ],
+          "note": "未提供可判断的证据",
+          "note_en": "No assessable evidence provided"
+        }
+      ],
+      "question_en": "Why do off-by-one loop errors like this easily survive casual testing? How should test inputs be constructed?",
+      "target_en": "test design"
+    },
+    {
+      "id": "q5",
+      "type": "code_variant",
+      "question": "假设修改：把第 3 行的 $i < n - 1$ 改成 $i < n$，程序的行为会怎样？（点击本题可在左侧预览修改后的代码）",
+      "question_en": "Hypothetical change: replace $i < n - 1$ with $i < n$ on line 3. How does the behavior change? (Click this question to preview the modified code on the left)",
+      "choices": [
+        "仍然漏掉最后一个元素",
+        "最后一个元素被纳入比较，程序变为正确",
+        "会越界访问 `arr[n]`",
+        "无法通过编译"
+      ],
+      "choices_en": [
+        "The last element is still skipped",
+        "The last element is now compared and the program becomes correct",
+        "It reads `arr[n]` out of bounds",
+        "The code no longer compiles"
+      ],
+      "target_issue": "loop-boundary",
+      "target_zh": "循环边界",
+      "target_en": "loop boundary",
+      "expected_answer": "B",
+      "code_lines": [
+        3
+      ],
+      "stage": "initial",
+      "variant": {
+        "line_no": 3,
+        "replacement": "for (int i = 1; i < n; i++) {"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "mastered",
+      "label": "解释充分",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "A",
+        "q4": "因为错误只在最大值恰好排最后时出现，随手测试很难碰到；需要专门构造最大值在末位的输入。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "mastered",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "partial",
+      "label": "部分理解",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "失效条件太窄：最大值不在末位时结果碰巧正确；测试要刻意把最大值放到末位。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "partial",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "contradictory",
+      "label": "解释矛盾",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "这个错误任何测试都能立刻发现。",
+        "q5": "C"
+      },
+      "expect": {
+        "understanding": "limited",
+        "needs_ta_review": true
+      }
+    },
+    {
+      "profile_id": "insufficient",
+      "label": "证据不足",
+      "answers": {
+        "q1": "B",
+        "q2": "B",
+        "q3": "B",
+        "q4": "不知道",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "insufficient",
+        "needs_ta_review": true
+      }
+    }
+  ],
+  "title_en": "Loop stops at n - 2: the last element is never checked",
+  "behavior_notes_en": "The condition $i < n - 1$ skips the last element; the questionnaire probes off-by-one boundaries and test design.",
+  "time_limit_minutes": 20
+}

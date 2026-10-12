@@ -1,0 +1,262 @@
+{
+  "case_id": "C05",
+  "title": "只比较首尾两个元素",
+  "assignment_id": "c-find-max",
+  "case_version": 1,
+  "review_status": "reviewed",
+  "code": "int find_max(int arr[], int n) {\n    int max = arr[0];\n\n    if (arr[n - 1] > max) {\n        max = arr[n - 1];\n    }\n\n    return max;\n}",
+  "code_quality": "incorrect",
+  "behavior_notes": "没有使用循环，只比较了 `arr[0]` 和 `arr[n-1]` 两个元素，中间的所有元素全部被忽略，算法不完整；例如 `[2, 10, 5, 3]` 会错误地返回 3。",
+  "verification_points": [
+    "incomplete-traversal",
+    "traversal-necessity",
+    "traversal-role"
+  ],
+  "input_coverage": [
+    "长度1",
+    "最大值在中间",
+    "最大值在首/末",
+    "重复最大值"
+  ],
+  "diagnosis": {
+    "summary": "没有使用循环，只比较了 `arr[0]` 和 `arr[n-1]` 两个元素，中间的所有元素全部被忽略，算法不完整；例如 `[2, 10, 5, 3]` 会错误地返回 3。",
+    "issues": [
+      {
+        "type": "incomplete-traversal",
+        "description": "仅比较首尾两个元素，未遍历中间元素，当最大值不在首尾时结果错误",
+        "evidence": "if (arr[n - 1] > max)",
+        "severity": "high",
+        "description_en": "Only `arr[n - 1]` is compared against `arr[0]`; interior elements are never examined, so the maximum can be missed."
+      }
+    ],
+    "summary_en": "Only `arr[n - 1]` is compared against `arr[0]`; interior elements are never examined, so the true maximum can be missed. The questionnaire focuses on traversal completeness."
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single_choice",
+      "question": "输入 `[2, 10, 5, 3]`（$n$ = 4）时，你的程序返回什么？",
+      "choices": [
+        "10",
+        "5",
+        "3",
+        "2"
+      ],
+      "target_issue": "incomplete-traversal",
+      "target_zh": "遍历完整性",
+      "expected_answer": "C",
+      "code_lines": [
+        4,
+        5
+      ],
+      "question_en": "For the input `[2, 10, 5, 3]` (n = 4), what does your program return?",
+      "target_en": "incomplete traversal",
+      "choices_en": [
+        "10",
+        "5",
+        "3",
+        "2"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single_choice",
+      "question": "在对数组内容没有任何先验信息的情况下，为什么寻找最大值必须逐一检查每个元素？",
+      "choices": [
+        "因为 C 语言语法强制要求这样做",
+        "因为任何没有被检查的元素都可能比当前最大值更大，跳过它就无法保证正确性",
+        "因为多比较能让程序运行得更快",
+        "因为不逐一检查会导致内存泄漏"
+      ],
+      "target_issue": "traversal-necessity",
+      "target_zh": "遍历必要性",
+      "expected_answer": "B",
+      "code_lines": [
+        4
+      ],
+      "question_en": "With no prior information about the array contents, why must finding the maximum examine every element?",
+      "target_en": "traversal necessity",
+      "choices_en": [
+        "Because the C syntax forces you to",
+        "Because any unchecked element could be larger than the current maximum; skipping it breaks the guarantee",
+        "Because more comparisons make the program run faster",
+        "Because not checking one by one causes a memory leak"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "single_choice",
+      "question": "循环结构在这类算法中的核心作用是什么？",
+      "choices": [
+        "让代码行数更少",
+        "对每一个候选元素重复执行相同的“比较—更新”规则，保证覆盖全部元素",
+        "把比较次数固定为 2 次",
+        "用于计算数组的长度"
+      ],
+      "target_issue": "traversal-role",
+      "target_zh": "遍历作用",
+      "expected_answer": "B",
+      "code_lines": [
+        4
+      ],
+      "question_en": "What is the core role of the loop construct in algorithms of this kind?",
+      "target_en": "role of traversal",
+      "choices_en": [
+        "It makes the code shorter",
+        "It repeats the same compare-and-update rule for every candidate, guaranteeing full coverage",
+        "It fixes the number of comparisons at 2",
+        "It computes the array length"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "question": "对于数组 `[7, 2, 9, 4, 1]`，请列出你的程序实际比较过的元素，并解释真正的最大值为什么没有被发现。",
+      "target_issue": "incomplete-traversal",
+      "target_zh": "遍历完整性",
+      "expected_answer": "只比较了 arr[0]=7 和 arr[4]=1；最大值 9 在 arr[2]，从未参与比较，所以不可能被发现。",
+      "code_lines": [
+        4,
+        5
+      ],
+      "samples": [
+        {
+          "verdict": "correct",
+          "variants": [
+            "只比较了 arr[0]=7 和 arr[4]=1；最大值 9 在 arr[2]，从未参与比较，所以不可能被发现。",
+            "比较过的是 7 和 1；9 在中间位置 arr[2]，程序没看它，自然找不到。",
+            "程序只看了首元素 7 和末元素 1，中间的 9 从未被比较，因此最大值不可能被发现。"
+          ],
+          "note": "能具体列出被检查的元素并指出遗漏",
+          "note_en": "Concretely listed the elements checked and identified the omission"
+        },
+        {
+          "verdict": "partial",
+          "variants": [
+            "只比较了首尾两个元素。",
+            "只比较了 arr[0] 和最后一个。"
+          ],
+          "note": "指出了比较范围，但没有结合具体元素说明最大值为何被漏掉",
+          "note_en": "Identified the comparison range, but did not use specific elements to explain why the maximum was missed"
+        },
+        {
+          "verdict": "wrong",
+          "variants": [
+            "比较了所有元素，9 应该能被找到。",
+            "程序检查了每个元素，返回 9 才对。"
+          ],
+          "note": "与代码事实相反：中间元素从未参与比较",
+          "note_en": "Contradicts the code: the middle element never participates in the comparison"
+        },
+        {
+          "verdict": "insufficient",
+          "variants": [
+            "不知道",
+            "没看懂代码",
+            "不清楚",
+            "I don't know"
+          ],
+          "note": "未提供可判断的证据",
+          "note_en": "No assessable evidence provided"
+        }
+      ],
+      "question_en": "For the array `[7, 2, 9, 4, 1]`, list the elements your program actually compared and explain why the true maximum was never discovered.",
+      "target_en": "incomplete traversal"
+    },
+    {
+      "id": "q5",
+      "type": "code_variant",
+      "question": "假设修改：把第 4 行的 `arr[n - 1]` 改成 `arr[1]`。对输入 `[7, 2, 9, 4]`（$n$ = 4），程序返回什么？（点击本题可在左侧预览修改后的代码）",
+      "question_en": "Hypothetical change: replace `arr[n - 1]` with `arr[1]` on line 4. For the input `[7, 2, 9, 4]` (n = 4), what does the program return? (Click this question to preview the modified code on the left)",
+      "choices": [
+        "9，最大值被正确找到",
+        "7，仍然只比较了一个位置，9 未被检查",
+        "4，最后一个元素",
+        "越界访问导致崩溃"
+      ],
+      "choices_en": [
+        "9 — the maximum is found correctly",
+        "7 — still only one position is compared; 9 is never examined",
+        "4 — the last element",
+        "It crashes with an out-of-bounds access"
+      ],
+      "target_issue": "incomplete-traversal",
+      "target_zh": "遍历完整性",
+      "target_en": "incomplete traversal",
+      "expected_answer": "B",
+      "code_lines": [
+        4
+      ],
+      "stage": "initial",
+      "variant": {
+        "line_no": 4,
+        "replacement": "if (arr[1] > max) {"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "mastered",
+      "label": "解释充分",
+      "answers": {
+        "q1": "C",
+        "q2": "B",
+        "q3": "B",
+        "q4": "比较过的是 7 和 1；9 在中间位置 arr[2]，程序没看它，自然找不到。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "mastered",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "partial",
+      "label": "部分理解",
+      "answers": {
+        "q1": "C",
+        "q2": "B",
+        "q3": "A",
+        "q4": "程序只看了首元素 7 和末元素 1，中间的 9 从未被比较，因此最大值不可能被发现。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "partial",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "contradictory",
+      "label": "解释矛盾",
+      "answers": {
+        "q1": "C",
+        "q2": "B",
+        "q3": "A",
+        "q4": "比较了所有元素，9 应该能被找到。",
+        "q5": "A"
+      },
+      "expect": {
+        "understanding": "limited",
+        "needs_ta_review": true
+      }
+    },
+    {
+      "profile_id": "insufficient",
+      "label": "证据不足",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "A",
+        "q4": "不知道",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "insufficient",
+        "needs_ta_review": true
+      }
+    }
+  ],
+  "title_en": "Compares only the first and last elements",
+  "behavior_notes_en": "Only the last element is compared against the first; interior elements are ignored; the questionnaire probes traversal completeness.",
+  "time_limit_minutes": 20
+}

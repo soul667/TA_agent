@@ -1,0 +1,262 @@
+{
+  "case_id": "C11",
+  "title": "用任意负常数 -9999 初始化：范围外输入失效",
+  "assignment_id": "c-find-max",
+  "case_version": 1,
+  "review_status": "reviewed",
+  "code": "int find_max(int arr[], int n) {\n    int max = -9999;\n    for (int i = 0; i < n; i++) {\n        if (arr[i] > max) {\n            max = arr[i];\n        }\n    }\n    return max;\n}",
+  "code_quality": "incorrect",
+  "behavior_notes": "遍历与比较方向正确，但初值是任取的负常数 `-9999`：当全部元素都小于 `-9999`（如 `[-10000, -20000]`）时，循环从不更新，返回不在数组中的 `-9999`。与 C09 的类型边界哨兵不同，任意常数没有取值范围依据。",
+  "verification_points": [
+    "sentinel-validity",
+    "value-range",
+    "failing-input"
+  ],
+  "input_coverage": [
+    "全部元素小于 -9999",
+    "含大于 -9999 的元素",
+    "全负数",
+    "整数边界"
+  ],
+  "diagnosis": {
+    "summary": "遍历与比较方向正确，但初值取任意负常数 `-9999`：一旦全部元素都小于 `-9999`（如 `[-10000, -20000]`），$max$ 停留在数组之外的哨兵值上，返回 `-9999` 而非数组元素。问题本质是把“任意够小的数”当成了“对所有输入都有效的下界”。",
+    "issues": [
+      {
+        "type": "sentinel-invalid",
+        "description": "任意常数 `-9999` 不是对全部 int 输入有效的下界：全小于它的数组会得到不在数组中的返回值",
+        "evidence": "int max = -9999; 输入 [-10000, -20000] 时返回 -9999",
+        "severity": "high",
+        "description_en": "The sentinel `-9999` fails for inputs whose elements are all below `-9999`."
+      }
+    ],
+    "summary_en": "The sentinel `-9999` only works while every element exceeds `-9999`; inputs entirely below it return wrong results. The questionnaire probes failing inputs and value ranges."
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single_choice",
+      "question": "输入 `[-10000, -20000]` 时，你的程序返回什么？",
+      "choices": [
+        "`-9999`",
+        "-10000",
+        "-20000",
+        "未定义"
+      ],
+      "target_issue": "sentinel-invalid",
+      "target_zh": "哨兵无效",
+      "expected_answer": "A",
+      "code_lines": [
+        2
+      ],
+      "question_en": "For the input `[-10000, -20000]`, what does your program return?",
+      "target_en": "invalid sentinel",
+      "choices_en": [
+        "`-9999`",
+        "-10000",
+        "-20000",
+        "Undefined"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single_choice",
+      "question": "这个程序对哪一类输入一定会返回错误结果？",
+      "choices": [
+        "所有元素都小于 `-9999` 的数组",
+        "所有元素都大于 `-9999` 的数组",
+        "任何输入都出错",
+        "只有长度为 1 的数组"
+      ],
+      "target_issue": "failing-input",
+      "target_zh": "失效输入",
+      "expected_answer": "A",
+      "code_lines": [
+        2,
+        4
+      ],
+      "question_en": "For which class of inputs is this program guaranteed to return a wrong result?",
+      "target_en": "failing input",
+      "choices_en": [
+        "Arrays whose elements are all below `-9999`",
+        "Arrays whose elements are all above `-9999`",
+        "Every input fails",
+        "Only arrays of length 1"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "single_choice",
+      "question": "为什么用 `arr[0]` 或 int 类型最小值做初值不会出现这个问题？",
+      "choices": [
+        "数组元素必在数组中、int 值必不小于类型最小值：两者都是对全体合法输入都成立的下界",
+        "因为它们运行速度更快",
+        "因为 C 语法规定只能这样初始化",
+        "它们只是习惯写法，同样可能失效"
+      ],
+      "target_issue": "value-range",
+      "target_zh": "取值范围",
+      "expected_answer": "A",
+      "code_lines": [
+        2
+      ],
+      "question_en": "Why do `arr[0]` or the int type minimum avoid this problem?",
+      "target_en": "value range",
+      "choices_en": [
+        "Array elements are in the array and int values are never below the type minimum: both hold for every legal input",
+        "Because they run faster",
+        "Because the C syntax only allows this",
+        "Just habits; they can equally fail"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "question": "请举一个能让程序返回错误结果的具体输入，并解释错误的产生过程。",
+      "target_issue": "failing-input",
+      "target_zh": "失效输入",
+      "expected_answer": "例如 [-10000, -20000]：max 初值 -9999 比所有元素都大，arr[i] > max 对每个元素都为假，max 从未被更新，最终返回的 -9999 不是数组中的元素。",
+      "code_lines": [
+        2,
+        4,
+        5
+      ],
+      "samples": [
+        {
+          "verdict": "correct",
+          "variants": [
+            "例如 [-10000, -20000]：max 初值 -9999 比所有元素都大，arr[i] > max 对每个元素都为假，max 从未被更新，最终返回的 -9999 不是数组中的元素。",
+            "比如输入都小于 -9999，像 [-12345, -20000]：条件永远不成立，返回 -9999，这个值不在数组里。",
+            "取 [-30000, -40000]：初值 -9999 反而比所有元素大，循环一次都不更新，返回数组之外的 -9999。"
+          ],
+          "note": "能构造失效反例并完整解释更新过程",
+          "note_en": "Constructed a failing counterexample and fully explained the update process"
+        },
+        {
+          "verdict": "partial",
+          "variants": [
+            "输入都很小的时候会错，返回 -9999。",
+            "全是小负数时结果不对。"
+          ],
+          "note": "给出了失效输入类型，但没有解释更新从未发生的过程",
+          "note_en": "Gave the type of failing input, but did not explain how the update never occurs"
+        },
+        {
+          "verdict": "wrong",
+          "variants": [
+            "任何输入都正确，-9999 已经足够小了。",
+            "只有正数输入才会出错。"
+          ],
+          "note": "没有意识到任意常数缺乏取值范围依据",
+          "note_en": "Failed to recognize that an arbitrary constant lacks justification from the value range"
+        },
+        {
+          "verdict": "insufficient",
+          "variants": [
+            "不知道",
+            "想不出例子",
+            "不清楚"
+          ],
+          "note": "未提供可判断的证据",
+          "note_en": "No assessable evidence provided"
+        }
+      ],
+      "question_en": "Give one concrete input that makes the program return a wrong result and explain step by step how the error arises.",
+      "target_en": "failing input"
+    },
+    {
+      "id": "q5",
+      "type": "code_variant",
+      "question": "假设修改：把第 2 行的 `-9999` 改成用 `arr[0]` 初始化，程序的行为会怎样？（点击本题可在左侧预览修改后的代码）",
+      "question_en": "Hypothetical change: replace `-9999` on line 2 with an initialization from `arr[0]`. How does the behavior change? (Click this question to preview the modified code on the left)",
+      "choices": [
+        "仍然对全负数输入出错",
+        "对任意满足 $n >= 1$ 的输入都返回正确最大值",
+        "只在数组长度为 1 时正确",
+        "会产生越界访问"
+      ],
+      "choices_en": [
+        "All-negative inputs still break",
+        "It returns the correct maximum for every input with $n >= 1$",
+        "It is correct only for arrays of length 1",
+        "It produces an out-of-bounds access"
+      ],
+      "target_issue": "sentinel-invalid",
+      "target_zh": "哨兵有效性",
+      "target_en": "invalid sentinel",
+      "expected_answer": "B",
+      "code_lines": [
+        2
+      ],
+      "stage": "initial",
+      "variant": {
+        "line_no": 2,
+        "replacement": "int max = arr[0];"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "mastered",
+      "label": "解释充分",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "A",
+        "q4": "比如输入都小于 -9999，像 [-12345, -20000]：条件永远不成立，返回 -9999，这个值不在数组里。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "mastered",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "partial",
+      "label": "部分理解",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "取 [-30000, -40000]：初值 -9999 反而比所有元素大，循环一次都不更新，返回数组之外的 -9999。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "partial",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "contradictory",
+      "label": "解释矛盾",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "任何输入都正确，-9999 已经足够小了。",
+        "q5": "C"
+      },
+      "expect": {
+        "understanding": "limited",
+        "needs_ta_review": true
+      }
+    },
+    {
+      "profile_id": "insufficient",
+      "label": "证据不足",
+      "answers": {
+        "q1": "B",
+        "q2": "B",
+        "q3": "B",
+        "q4": "不知道",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "insufficient",
+        "needs_ta_review": true
+      }
+    }
+  ],
+  "title_en": "Arbitrary negative constant -9999 as sentinel: fails outside the range",
+  "behavior_notes_en": "A `-9999` sentinel fails for inputs entirely below `-9999`; the questionnaire probes failing inputs and value ranges.",
+  "time_limit_minutes": 20
+}

@@ -1,0 +1,252 @@
+{
+  "case_id": "C07",
+  "title": "正确实现：循环从 0 开始（多一次自比较）",
+  "assignment_id": "c-find-max",
+  "case_version": 1,
+  "review_status": "reviewed",
+  "code": "int find_max(int arr[], int n) {\n    int max = arr[0];\n    for (int i = 0; i < n; i++) {\n        if (arr[i] > max) {\n            max = arr[i];\n        }\n    }\n    return max;\n}",
+  "code_quality": "correct",
+  "behavior_notes": "正确实现。循环从 $i$=0 开始，第一轮是 `arr[0]` 与自身比较（恒为假），比从 $i$=1 开始多一次冗余但无害的比较。不得误判为错误。",
+  "verification_points": [
+    "equivalent-implementation",
+    "redundant-comparison",
+    "comparison-count"
+  ],
+  "input_coverage": [
+    "长度1",
+    "全负数",
+    "重复最大值",
+    "最大值在首/中/末位置"
+  ],
+  "diagnosis": {
+    "summary": "提交正确：以 `arr[0]` 为初值、遍历 [0, $n$)、比较方向与返回值均正确。与从 $i$=1 开始的写法等价，只是首轮多一次 `arr[0]` 与自身的冗余比较。问卷用于确认学生理解这种等价性，避免把“从 0 开始”误判为越界错误。",
+    "issues": [],
+    "summary_en": "Correct implementation starting at i = 0: one redundant self-comparison on the first round, otherwise equivalent. The questionnaire confirms understanding of equivalence and cost."
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single_choice",
+      "question": "你的循环第一轮（$i$ = 0）执行 `arr[0]` > $max$ 的判断，结果必然是什么？为什么？",
+      "choices": [
+        "必为假：$max$ 的初值就是 `arr[0]`，一个数不会大于它自己",
+        "必为真：循环第一轮总会更新 $max$",
+        "取决于数组内容",
+        "属于未定义行为"
+      ],
+      "target_issue": "redundant-comparison",
+      "target_zh": "自比较",
+      "expected_answer": "A",
+      "code_lines": [
+        3,
+        4
+      ],
+      "question_en": "In the first round (i = 0) your loop evaluates `arr[0]` > max. What is the result necessarily, and why?",
+      "target_en": "redundant comparison",
+      "choices_en": [
+        "Always false: $max$ starts as `arr[0]`, and a number is not greater than itself",
+        "Always true: the first round always updates $max$",
+        "It depends on the array contents",
+        "It is undefined behavior"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single_choice",
+      "question": "与“从 $i$ = 1 开始”的写法相比，这个程序的行为有什么差别？",
+      "choices": [
+        "返回结果完全相同，只是多执行一次不会产生更新的比较",
+        "结果可能不同：会漏掉最大值",
+        "会访问 `arr[n]` 造成越界",
+        "少检查了一个元素"
+      ],
+      "target_issue": "equivalent-implementation",
+      "target_zh": "等价实现",
+      "expected_answer": "A",
+      "code_lines": [
+        3
+      ],
+      "question_en": "Compared with the version that starts at i = 1, how does this program behave differently?",
+      "target_en": "equivalent implementation",
+      "choices_en": [
+        "Identical result, just one extra comparison that can never update $max$",
+        "The result may differ: the maximum could be missed",
+        "It reads `arr[n]` out of bounds",
+        "One element fewer is examined"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "single_choice",
+      "question": "对长度为 $n$ 的数组，从 $i$ = 0 开始与从 $i$ = 1 开始分别执行多少次比较？",
+      "choices": [
+        "$n$-1 次和 $n$ 次",
+        "$n$ 次和 $n$-1 次",
+        "都是 $n$ 次",
+        "都是 $n$-1 次"
+      ],
+      "target_issue": "comparison-count",
+      "target_zh": "比较次数",
+      "expected_answer": "B",
+      "code_lines": [
+        3
+      ],
+      "question_en": "For an array of length n, how many comparisons do the i = 0 and i = 1 versions perform respectively?",
+      "target_en": "comparison count",
+      "choices_en": [
+        "$n$-1 and $n$",
+        "$n$ and $n$-1",
+        "Both $n$",
+        "Both $n$-1"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "question": "既然两种写法都正确，什么场合下你会优先选择从 $i$ = 1 开始？请给出一条工程上的理由。",
+      "target_issue": "equivalent-implementation",
+      "target_zh": "等价实现",
+      "expected_answer": "少一次无意义的自比较，意图更明确：初值元素无需再与自己比较；这在追求效率或表达遍历意图时更清晰，但两种写法的正确性等价。",
+      "code_lines": [
+        3
+      ],
+      "samples": [
+        {
+          "verdict": "correct",
+          "variants": [
+            "从 i=1 开始少一次自比较，意图更清楚：初值元素不必再和自己比；两种写法正确性等价，选择主要是效率和可读性考虑。",
+            "少一次多余比较，代码意图更明确，但两者结果永远相同。",
+            "工程上会选 i=1：避免无意义的自比较，遍历范围的表达也更贴合“检查其余元素”。"
+          ],
+          "note": "理解等价性并能给出取舍理由",
+          "note_en": "Understood the equivalence and can justify the trade-off"
+        },
+        {
+          "verdict": "partial",
+          "variants": [
+            "少比较一次，快一点。",
+            "从 1 开始更规范。"
+          ],
+          "note": "给出了效率差异，但没有点出两者正确性等价",
+          "note_en": "Noted the efficiency difference, but did not point out that both are equally correct"
+        },
+        {
+          "verdict": "wrong",
+          "variants": [
+            "从 0 开始是错的，必须从 1 开始否则结果不正确。",
+            "只有从 1 开始的程序才是对的。"
+          ],
+          "note": "把等价写法误当成对错之分",
+          "note_en": "Mistook equivalent formulations for a right-vs-wrong distinction"
+        },
+        {
+          "verdict": "insufficient",
+          "variants": [
+            "不知道",
+            "没区别随便选",
+            "不清楚"
+          ],
+          "note": "未提供可判断的证据",
+          "note_en": "No assessable evidence provided"
+        }
+      ],
+      "question_en": "Since both versions are correct, in which situations would you prefer starting at i = 1? Give one engineering reason.",
+      "target_en": "equivalent implementation"
+    },
+    {
+      "id": "q5",
+      "type": "code_variant",
+      "question": "假设修改：把第 3 行的 $i$ = 0 改成 $i$ = 1，程序的行为会怎样？（点击本题可在左侧预览修改后的代码）",
+      "question_en": "Hypothetical change: replace i = 0 with i = 1 on line 3. How does the behavior change? (Click this question to preview the modified code on the left)",
+      "choices": [
+        "会漏掉 `arr[0]`，最大值可能丢失",
+        "产生越界访问",
+        "结果仍正确，并少了第一轮 `arr[0]` 与自身的比较",
+        "无法通过编译"
+      ],
+      "choices_en": [
+        "`arr[0]` would be skipped and the maximum could be lost",
+        "It produces an out-of-bounds access",
+        "Still correct, with one fewer self-comparison of `arr[0]` on the first round",
+        "The code no longer compiles"
+      ],
+      "target_issue": "equivalent-implementation",
+      "target_zh": "等价实现",
+      "target_en": "equivalent implementation",
+      "expected_answer": "C",
+      "code_lines": [
+        3
+      ],
+      "stage": "initial",
+      "variant": {
+        "line_no": 3,
+        "replacement": "for (int i = 1; i < n; i++) {"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "mastered",
+      "label": "解释充分",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "从 i=1 开始少一次自比较，意图更清楚：初值元素不必再和自己比；两种写法正确性等价，选择主要是效率和可读性考虑。",
+        "q5": "C"
+      },
+      "expect": {
+        "understanding": "mastered",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "partial",
+      "label": "部分理解",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "A",
+        "q4": "工程上会选 i=1：避免无意义的自比较，遍历范围的表达也更贴合“检查其余元素”。",
+        "q5": "C"
+      },
+      "expect": {
+        "understanding": "partial",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "contradictory",
+      "label": "解释矛盾",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "A",
+        "q4": "从 0 开始是错的，必须从 1 开始否则结果不正确。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "limited",
+        "needs_ta_review": true
+      }
+    },
+    {
+      "profile_id": "insufficient",
+      "label": "证据不足",
+      "answers": {
+        "q1": "B",
+        "q2": "B",
+        "q3": "A",
+        "q4": "不知道",
+        "q5": "C"
+      },
+      "expect": {
+        "understanding": "insufficient",
+        "needs_ta_review": true
+      }
+    }
+  ],
+  "title_en": "Correct implementation: loop starts at i = 0 (one redundant self-comparison)",
+  "behavior_notes_en": "Correct, with one harmless self-comparison at i = 0; the questionnaire probes equivalent implementations and comparison counts.",
+  "time_limit_minutes": 20
+}

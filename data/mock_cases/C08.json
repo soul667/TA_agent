@@ -1,0 +1,253 @@
+{
+  "case_id": "C08",
+  "title": "正确实现：反向遍历",
+  "assignment_id": "c-find-max",
+  "case_version": 1,
+  "review_status": "reviewed",
+  "code": "int find_max(int arr[], int n) {\n    int max = arr[n - 1];\n    for (int i = n - 2; i >= 0; i--) {\n        if (arr[i] > max) {\n            max = arr[i];\n        }\n    }\n    return max;\n}",
+  "code_quality": "correct",
+  "behavior_notes": "正确实现：以末元素 `arr[n-1]` 为初值，从 $n$-2 反向遍历到 0，覆盖完整、下标合法（$n>=1$ 时 $n$-1 与 $n$-2 均在范围内或循环不执行）。",
+  "verification_points": [
+    "reverse-traversal",
+    "initialization",
+    "coverage-completeness"
+  ],
+  "input_coverage": [
+    "长度1",
+    "长度2",
+    "全负数",
+    "最大值在首/中/末位置"
+  ],
+  "diagnosis": {
+    "summary": "提交正确：以 `arr[n-1]` 为初值、从 $n$-2 递减遍历到 0，初始化、覆盖完整性与比较方向都符合要求。问卷用于确认学生对遍历范围、终止条件与覆盖完整性的理解（尤其是反向遍历与 $n$=1 的边界）。",
+    "issues": [],
+    "summary_en": "Correct reverse traversal: max starts at `arr[n - 1]` and every earlier index is examined. The questionnaire confirms coverage reasoning and edge cases."
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single_choice",
+      "question": "用 `arr[n - 1]` 作为 $max$ 的初始值，为什么是安全的？",
+      "choices": [
+        "它是数组中确实存在的合法候选；在 $n >= 1$ 的约定下该下标总是可访问",
+        "因为最后一个元素一定就是最大值",
+        "因为任何负数都可以做初值",
+        "并不安全：`arr[n-1]` 是越界访问"
+      ],
+      "target_issue": "initialization",
+      "target_zh": "初始化",
+      "expected_answer": "A",
+      "code_lines": [
+        2
+      ],
+      "question_en": "Why is it safe to use `arr[n - 1]` as the initial value of max here?",
+      "target_en": "initialization",
+      "choices_en": [
+        "It is a valid candidate that really exists in the array; under the guarantee $n >= 1$ that index is always accessible",
+        "Because the last element is always the maximum",
+        "Because any negative number works as an initial value",
+        "It is not safe: `arr[n-1]` is an out-of-bounds access"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single_choice",
+      "question": "循环 `for (int i = n - 2; i >= 0; i--)` 一共检查了哪些元素？",
+      "choices": [
+        "从 `arr[n-2]` 回到 `arr[0]` 的全部元素；`arr[n-1]` 已用作初值",
+        "只检查了数组的前一半",
+        "检查了包括 `arr[n-1]` 在内的全部元素",
+        "漏掉了 `arr[0]`"
+      ],
+      "target_issue": "reverse-traversal",
+      "target_zh": "反向遍历",
+      "expected_answer": "A",
+      "code_lines": [
+        3
+      ],
+      "question_en": "Which elements does the loop `for (int i = n - 2; i >= 0; i--)` examine?",
+      "target_en": "reverse traversal",
+      "choices_en": [
+        "All elements from `arr[n-2]` back to `arr[0]`; `arr[n-1]` already served as the initial value",
+        "Only the first half of the array",
+        "All elements including `arr[n-1]`",
+        "`arr[0]` is missed"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "single_choice",
+      "question": "当 $n$ = 1 时，这个函数的行为是什么？",
+      "choices": [
+        "初值取 `arr[0]`，循环条件 $n$-2 = -1 不满足，直接返回 `arr[0]`",
+        "访问 `arr[-1]` 造成越界",
+        "陷入死循环",
+        "返回 0"
+      ],
+      "target_issue": "reverse-traversal",
+      "target_zh": "反向遍历",
+      "expected_answer": "A",
+      "code_lines": [
+        2,
+        3
+      ],
+      "question_en": "When n = 1, what does this function do?",
+      "target_en": "reverse traversal",
+      "choices_en": [
+        "The initial value is `arr[0]`; the loop condition $n$-2 = -1 fails immediately, so `arr[0]` is returned",
+        "It reads `arr[-1]` out of bounds",
+        "It loops forever",
+        "It returns 0"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "question": "反向遍历与正向遍历在正确性上为什么等价？请从“覆盖”的角度用一两句话说明。",
+      "target_issue": "coverage-completeness",
+      "target_zh": "覆盖完整性",
+      "expected_answer": "两者都先取一个数组元素做初值，再让其余每个元素恰好参与一次比较；只要覆盖完整且更新方向正确，遍历顺序不影响最终的最大值。",
+      "code_lines": [
+        3,
+        4
+      ],
+      "samples": [
+        {
+          "verdict": "correct",
+          "variants": [
+            "两者都先取一个数组元素做初值，再让其余每个元素恰好参与一次比较；只要覆盖完整且更新方向正确，遍历顺序不影响最终的最大值。",
+            "都是从初值出发覆盖其余全部元素，顺序不影响结果，覆盖完整才是关键。",
+            "等价的原因是覆盖：每个元素都被比较到，最大值与检查顺序无关。"
+          ],
+          "note": "从覆盖角度正确解释了等价性",
+          "note_en": "Correctly explained the equivalence from a coverage perspective"
+        },
+        {
+          "verdict": "partial",
+          "variants": [
+            "都能找到最大值。",
+            "结果一样。"
+          ],
+          "note": "结论正确，但没有从覆盖角度解释",
+          "note_en": "Correct conclusion, but did not explain it from a coverage perspective"
+        },
+        {
+          "verdict": "wrong",
+          "variants": [
+            "反向会先找到小元素，所以结果可能不同。",
+            "反向遍历会漏掉一半元素，只有正向才正确。"
+          ],
+          "note": "对覆盖完整性的理解有误",
+          "note_en": "Misunderstood the completeness of coverage"
+        },
+        {
+          "verdict": "insufficient",
+          "variants": [
+            "不知道",
+            "没想过",
+            "不清楚"
+          ],
+          "note": "未提供可判断的证据",
+          "note_en": "No assessable evidence provided"
+        }
+      ],
+      "question_en": "Why is reverse traversal equivalent to forward traversal in correctness? Explain from the coverage perspective in a sentence or two.",
+      "target_en": "coverage completeness"
+    },
+    {
+      "id": "q5",
+      "type": "code_variant",
+      "question": "假设修改：把第 2 行改成 int $max$ = `arr[0]`;（循环仍从 $i$ = $n$ - 2 开始反向遍历）。对输入 `[1, 2, 9]`（$n$ = 3），程序返回什么？（点击本题可在左侧预览修改后的代码）",
+      "question_en": "Hypothetical change: line 2 becomes int max = `arr[0]`; while the loop still walks in reverse from i = n - 2. For the input `[1, 2, 9]` (n = 3), what does the program return? (Click this question to preview the modified code on the left)",
+      "choices": [
+        "9，结果不受影响",
+        "2，`arr[n-1]` = 9 从未被比较，最大值丢失",
+        "1，返回了初始值",
+        "越界访问导致崩溃"
+      ],
+      "choices_en": [
+        "9 — the result is unaffected",
+        "2 — `arr[n-1]` = 9 is never compared, so the maximum is lost",
+        "1 — the initial value is returned",
+        "It crashes with an out-of-bounds access"
+      ],
+      "target_issue": "coverage-completeness",
+      "target_zh": "遍历覆盖",
+      "target_en": "coverage completeness",
+      "expected_answer": "B",
+      "code_lines": [
+        2
+      ],
+      "stage": "initial",
+      "variant": {
+        "line_no": 2,
+        "replacement": "int max = arr[0];"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "mastered",
+      "label": "解释充分",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "A",
+        "q4": "都是从初值出发覆盖其余全部元素，顺序不影响结果，覆盖完整才是关键。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "mastered",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "partial",
+      "label": "部分理解",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "等价的原因是覆盖：每个元素都被比较到，最大值与检查顺序无关。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "partial",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "contradictory",
+      "label": "解释矛盾",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "反向遍历会漏掉一半元素，只有正向才正确。",
+        "q5": "A"
+      },
+      "expect": {
+        "understanding": "limited",
+        "needs_ta_review": true
+      }
+    },
+    {
+      "profile_id": "insufficient",
+      "label": "证据不足",
+      "answers": {
+        "q1": "B",
+        "q2": "B",
+        "q3": "B",
+        "q4": "不知道",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "insufficient",
+        "needs_ta_review": true
+      }
+    }
+  ],
+  "title_en": "Correct implementation: reverse traversal",
+  "behavior_notes_en": "Correct: initializes from `arr[n - 1]` and traverses in reverse; the questionnaire probes coverage and the n = 1 case.",
+  "time_limit_minutes": 20
+}

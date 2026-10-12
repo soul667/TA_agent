@@ -1,0 +1,276 @@
+{
+  "case_id": "C02",
+  "title": "最大值初始化为常量 0（全负数输入出错）",
+  "assignment_id": "c-find-max",
+  "case_version": 1,
+  "review_status": "reviewed",
+  "code": "int find_max(int arr[], int n) {\n    int max = 0;\n\n    for (int i = 0; i < n; i++) {\n        if (arr[i] > max) {\n            max = arr[i];\n        }\n    }\n\n    return max;\n}",
+  "code_quality": "incorrect",
+  "behavior_notes": "遍历范围与比较方向正确，但初值取常数 0：全负数数组（如 `[-5, -2, -10]`）时返回 0，而 0 不在数组中。",
+  "verification_points": [
+    "initialization",
+    "edge-case"
+  ],
+  "input_coverage": [
+    "全负数",
+    "含 0 输入",
+    "重复最大值",
+    "最大值在首/中/末位置"
+  ],
+  "diagnosis": {
+    "summary": "遍历范围与比较方向正确，但最大值初始化为常量 0，隐含了“数组中一定存在大于 0 的元素”这一未经验证的假设；当数组全为负数（如 `[-5, -2, -10]`）时返回 0，而 0 并不在数组中。",
+    "issues": [
+      {
+        "type": "initialization",
+        "description": "最大值初始值取常数 0 而非数组中的元素，对全负数数组必然给出错误结果",
+        "evidence": "int max = 0;",
+        "severity": "high",
+        "description_en": "max initialized to 0: for all-negative inputs the result is always 0 instead of the true maximum."
+      },
+      {
+        "type": "edge-case",
+        "description": "未考虑全部元素为负数的边界情况，返回值不是数组中的任何元素",
+        "evidence": "输入 [-5, -2, -10] 时返回 0",
+        "severity": "high"
+      }
+    ],
+    "summary_en": "max is initialized to 0, so any all-negative input returns the wrong result. The questionnaire focuses on initialization assumptions and edge inputs."
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single_choice",
+      "question": "你的程序输入 `[-5, -2, -10]` 时会返回什么？",
+      "choices": [
+        "-2",
+        "-10",
+        "0",
+        "-5"
+      ],
+      "target_issue": "initialization",
+      "target_zh": "初始化",
+      "expected_answer": "C",
+      "code_lines": [
+        2
+      ],
+      "question_en": "What does your program return for the input `[-5, -2, -10]`?",
+      "target_en": "initialization",
+      "choices_en": [
+        "-2",
+        "-10",
+        "0",
+        "-5"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single_choice",
+      "question": "对上面这个返回结果，最准确的解释是什么？",
+      "choices": [
+        "循环少执行了一次，导致漏掉了最大的元素",
+        "最大值的初始值取了一个不在数组中的常数 0，而所有元素都比它小，$max$ 从未被更新过",
+        "比较运算符的方向写反了",
+        "数组下标越界，读到了别的内存"
+      ],
+      "target_issue": "initialization",
+      "target_zh": "初始化",
+      "expected_answer": "B",
+      "code_lines": [
+        2,
+        5
+      ],
+      "question_en": "What is the most accurate explanation of that returned result?",
+      "target_en": "initialization",
+      "choices_en": [
+        "The loop runs one iteration short, so the largest element is missed",
+        "The initial max is the constant 0, which is not in the array; every element is smaller, so $max$ is never updated",
+        "The comparison operator direction is reversed",
+        "An out-of-bounds index reads unrelated memory"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "multiple_choice",
+      "question": "以下哪些输入会让你的程序返回错误结果？（多选）",
+      "choices": [
+        "`[3, 1, 2]`",
+        "`[-4, -1, -6]`",
+        "`[5, -2, 9]`",
+        "`[-7, -3]`"
+      ],
+      "target_issue": "edge-case",
+      "target_zh": "边界输入",
+      "expected_answer": "B,D",
+      "code_lines": [
+        2
+      ],
+      "question_en": "Which inputs make your program return a wrong result? (multiple choice)",
+      "target_en": "edge case",
+      "choices_en": [
+        "`[3, 1, 2]`",
+        "`[-4, -1, -6]`",
+        "`[5, -2, 9]`",
+        "`[-7, -3]`"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "question": "在进入循环之前，你会选择什么值作为 $max$ 的初始值？请说明理由：为什么这个初始值能保证后续比较对所有输入（包括全负数）都是公平的？",
+      "target_issue": "initialization",
+      "target_zh": "初始化",
+      "expected_answer": "应选择 arr[0]（数组中的某个元素）。因为数组元素本身才是最大值的合法候选，用它做初值不会引入任何“数组之外”的假设，对全负数数组同样成立；而常数 0 是凭空引入的外部值。",
+      "code_lines": [
+        2
+      ],
+      "samples": [
+        {
+          "verdict": "correct",
+          "variants": [
+            "应选择 arr[0]（数组中的某个元素）。因为数组元素本身才是最大值的合法候选，用它做初值不会引入任何“数组之外”的假设，对全负数数组同样成立；而常数 0 是凭空引入的外部值。",
+            "选 arr[0]，数组元素本身就是合法候选，不会引入数组之外的假设，全负数也成立。",
+            "用数组里的元素做初值（比如 arr[0]），最大值一定是数组元素之一，不能凭空引入 0 这样的外部值。"
+          ],
+          "note": "准确说出了初值必须是合法候选这一关键",
+          "note_en": "Accurately identified the key point that the initial value must be a valid candidate"
+        },
+        {
+          "verdict": "partial",
+          "variants": [
+            "选 arr[0]，因为 0 不行。",
+            "选数组第一个元素。"
+          ],
+          "note": "结论正确，但未说明初值须是合法候选的理由",
+          "note_en": "Correct conclusion, but did not explain why the initial value must be a valid candidate"
+        },
+        {
+          "verdict": "wrong",
+          "variants": [
+            "用 0 就可以，反正循环会把它更新成最大值。",
+            "用一个很小的负数比如 -10000 就万无一失。"
+          ],
+          "note": "仍未摆脱“数组外常数”的假设：比它还小的输入同样出错",
+          "note_en": "Still stuck on the 'constant outside the array' assumption: inputs smaller than it also fail"
+        },
+        {
+          "verdict": "insufficient",
+          "variants": [
+            "随便写的",
+            "不知道",
+            "没想到这个问题",
+            "I don't know"
+          ],
+          "note": "未提供可判断的证据",
+          "note_en": "No assessable evidence provided"
+        }
+      ],
+      "question_en": "Before entering the loop, which value would you choose as the initial max? Explain why that initial value keeps the comparisons fair for every input, including all-negative arrays.",
+      "target_en": "initialization"
+    },
+    {
+      "id": "q5",
+      "type": "code_variant",
+      "question": "假设修改：把第 2 行的 $max$ = 0 改成用 `arr[0]` 初始化，程序的行为会怎样？（点击本题可在左侧预览修改后的代码）",
+      "question_en": "Hypothetical change: initialize max from `arr[0]` instead of 0 on line 2. How does the behavior change? (Click this question to preview the modified code on the left)",
+      "choices": [
+        "仍然对全负数输入返回 0",
+        "全负数输入也能返回正确的最大值",
+        "所有输入都变成错误结果",
+        "`arr[0]` 会越界访问"
+      ],
+      "choices_en": [
+        "All-negative inputs still return 0",
+        "All-negative inputs now return the correct maximum",
+        "Every input becomes wrong",
+        "`arr[0]` would be an out-of-bounds access"
+      ],
+      "target_issue": "initialization",
+      "target_zh": "初始化",
+      "target_en": "initialization",
+      "expected_answer": "B",
+      "code_lines": [
+        2
+      ],
+      "stage": "initial",
+      "variant": {
+        "line_no": 2,
+        "replacement": "int max = arr[0];"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "mastered",
+      "label": "解释充分",
+      "answers": {
+        "q1": "C",
+        "q2": "B",
+        "q3": [
+          "B",
+          "D"
+        ],
+        "q4": "选 arr[0]，数组元素本身就是合法候选，不会引入数组之外的假设，全负数也成立。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "mastered",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "partial",
+      "label": "部分理解",
+      "answers": {
+        "q1": "C",
+        "q2": "B",
+        "q3": [
+          "A"
+        ],
+        "q4": "用数组里的元素做初值（比如 arr[0]），最大值一定是数组元素之一，不能凭空引入 0 这样的外部值。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "partial",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "contradictory",
+      "label": "解释矛盾",
+      "answers": {
+        "q1": "C",
+        "q2": "B",
+        "q3": [
+          "A"
+        ],
+        "q4": "用 0 就可以，反正循环会把它更新成最大值。",
+        "q5": "A"
+      },
+      "expect": {
+        "understanding": "limited",
+        "needs_ta_review": true
+      }
+    },
+    {
+      "profile_id": "insufficient",
+      "label": "证据不足",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": [
+          "A",
+          "C"
+        ],
+        "q4": "随便写的",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "insufficient",
+        "needs_ta_review": true
+      }
+    }
+  ],
+  "title_en": "max initialized to the constant 0 (fails on all-negative input)",
+  "behavior_notes_en": "Fails for all-negative arrays: 0 wins over every element; the questionnaire probes initialization assumptions and edge inputs.",
+  "time_limit_minutes": 20
+}

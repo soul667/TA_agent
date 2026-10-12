@@ -1,0 +1,252 @@
+{
+  "case_id": "C09",
+  "title": "正确实现：用 INT_MIN 值初始化并遍历全部元素",
+  "assignment_id": "c-find-max",
+  "case_version": 1,
+  "review_status": "reviewed",
+  "code": "int find_max(int arr[], int n) {\n    int max = -2147483648;\n    for (int i = 0; i < n; i++) {\n        if (arr[i] > max) {\n            max = arr[i];\n        }\n    }\n    return max;\n}",
+  "code_quality": "correct",
+  "behavior_notes": "正确实现（限定输入为 int 时）：用 int 最小值 `-2147483648`（即 `INT_MIN`）做哨兵初值并遍历全部元素，任何 int 元素都不小于它，$max$ 必被更新为数组元素。要点是区分“类型边界哨兵”与“任意固定常数”。",
+  "verification_points": [
+    "sentinel-initialization",
+    "value-range",
+    "full-traversal"
+  ],
+  "input_coverage": [
+    "全负数",
+    "整数边界（恰为 INT_MIN）",
+    "长度1",
+    "重复最大值"
+  ],
+  "diagnosis": {
+    "summary": "提交正确：以 int 类型最小值（`-2147483648`，即 `INT_MIN`）做哨兵初值并遍历全部元素。对 int 输入域，任何元素都不小于该哨兵，因此 $max$ 一定会被更新为数组中的元素。问卷用于确认学生理解“类型边界哨兵”与“任意常数”的本质区别。",
+    "issues": [],
+    "summary_en": "Correct sentinel implementation: max starts at `INT_MIN` and all n elements are examined. The questionnaire probes why the sentinel is valid here and how it depends on the value range."
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single_choice",
+      "question": "用 `-2147483648` 做初值为什么对本题是正确的？",
+      "choices": [
+        "任何 int 值都不会小于它，所以第一轮比较必然把 $max$ 更新为数组元素（或与之相等）",
+        "因为它是最大的负数",
+        "因为所有数组都包含这个值",
+        "只是编程习惯，与正确性无关"
+      ],
+      "target_issue": "sentinel-initialization",
+      "target_zh": "哨兵初值",
+      "expected_answer": "A",
+      "code_lines": [
+        2
+      ],
+      "question_en": "Why is using `-2147483648` as the initial value correct for this problem?",
+      "target_en": "sentinel initialization",
+      "choices_en": [
+        "No int value is smaller than it, so the first comparison necessarily sets $max$ to an array element (or an equal value)",
+        "Because it is the largest negative number",
+        "Because every array contains this value",
+        "Just a habit; correctness is unaffected"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single_choice",
+      "question": "把它换成任意负常数（例如 `-9999`）还一定正确吗？",
+      "choices": [
+        "不一定：若全部元素都小于 `-9999`，$max$ 会停留在数组之外的哨兵值上",
+        "一定正确，负数足够小就行",
+        "一定错误，只有 `arr[0]` 可用",
+        "正确与否取决于数组长度"
+      ],
+      "target_issue": "value-range",
+      "target_zh": "取值范围",
+      "expected_answer": "A",
+      "code_lines": [
+        2
+      ],
+      "question_en": "Would replacing it with an arbitrary negative constant (for example `-9999`) still always be correct?",
+      "target_en": "value range",
+      "choices_en": [
+        "Not necessarily: if every element is below `-9999`, $max$ stays at the sentinel, which is not in the array",
+        "Always correct as long as the negative number is small enough",
+        "Always wrong; only `arr[0]` works",
+        "It depends on the array length"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "single_choice",
+      "question": "如果数组元素是 long long 而函数仍用 `-2147483648` 做初值，会怎样？",
+      "choices": [
+        "可能出错：元素可以取到比 int 最小值更小的数，哨兵不再是有效下界",
+        "完全不受影响",
+        "编译不通过",
+        "会自动使用 long long 的最小值"
+      ],
+      "target_issue": "value-range",
+      "target_zh": "取值范围",
+      "expected_answer": "A",
+      "code_lines": [
+        2
+      ],
+      "question_en": "If the array elements were long long but the initial value stayed `-2147483648`, what would happen?",
+      "target_en": "value range",
+      "choices_en": [
+        "It can fail: elements may be smaller than the int minimum, so the sentinel is no longer a valid lower bound",
+        "Completely unaffected",
+        "It does not compile",
+        "It automatically uses the long long minimum"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "question": "哨兵值方法（用类型最小值做初值）依赖什么前提？它与“用数组元素做初值”相比，安全性依赖的条件有何不同？",
+      "target_issue": "sentinel-initialization",
+      "target_zh": "哨兵初值",
+      "expected_answer": "哨兵法依赖输入取值范围不超过该类型（所有元素都是 int，必然 ≥ INT_MIN）；用数组元素做初值则不依赖取值范围，只要 n>=1 即可。前者的安全性绑定在类型边界上，后者的安全性绑定在前置条件上。",
+      "code_lines": [
+        2,
+        3
+      ],
+      "samples": [
+        {
+          "verdict": "correct",
+          "variants": [
+            "哨兵法依赖输入取值范围不超过该类型（所有元素都是 int，必然 ≥ INT_MIN）；用数组元素做初值则不依赖取值范围，只要 n>=1 即可。前者的安全性绑定在类型边界上，后者的安全性绑定在前置条件上。",
+            "哨兵法的前提是元素都在该类型范围内；元素初值法只要数组非空就安全，不依赖数值范围。",
+            "哨兵法假设没有元素比哨兵更小，这由类型保证；用 arr[0] 则只依赖 n>=1，与数值范围无关。"
+          ],
+          "note": "准确区分了两种初值的安全性来源",
+          "note_en": "Accurately distinguished the sources of safety for the two initialization approaches"
+        },
+        {
+          "verdict": "partial",
+          "variants": [
+            "前提是元素都是 int。",
+            "要求没有元素比初值更小。"
+          ],
+          "note": "说出了范围前提，但没有与元素初值法对比",
+          "note_en": "Stated the range prerequisite, but did not compare it with the element-initialization approach"
+        },
+        {
+          "verdict": "wrong",
+          "variants": [
+            "哨兵法对任何输入都绝对安全，不需要任何前提。",
+            "两种方法的安全性来源完全相同。"
+          ],
+          "note": "忽略了哨兵法对类型取值范围的依赖",
+          "note_en": "Ignored the sentinel method's dependence on the type's value range"
+        },
+        {
+          "verdict": "insufficient",
+          "variants": [
+            "不知道",
+            "没考虑过",
+            "不清楚"
+          ],
+          "note": "未提供可判断的证据",
+          "note_en": "No assessable evidence provided"
+        }
+      ],
+      "question_en": "What premise does the sentinel approach (initializing with the type minimum) rely on? How does the safety condition differ from initializing with an array element?",
+      "target_en": "sentinel initialization"
+    },
+    {
+      "id": "q5",
+      "type": "code_variant",
+      "question": "假设修改：把第 2 行的初值 `-2147483648` 改成 `-9999`，哪类输入会出错？（点击本题可在左侧预览修改后的代码）",
+      "question_en": "Hypothetical change: replace the initial value `-2147483648` with `-9999` on line 2. Which inputs break? (Click this question to preview the modified code on the left)",
+      "choices": [
+        "元素全部小于 `-9999` 的输入（例如 -10000）",
+        "所有输入都会出错",
+        "元素全部大于 0 的输入",
+        "没有任何差别"
+      ],
+      "choices_en": [
+        "Inputs whose elements are all below `-9999` (for example -10000)",
+        "Every input breaks",
+        "Inputs whose elements are all positive",
+        "There is no difference at all"
+      ],
+      "target_issue": "value-range",
+      "target_zh": "取值范围",
+      "target_en": "value range",
+      "expected_answer": "A",
+      "code_lines": [
+        2
+      ],
+      "stage": "initial",
+      "variant": {
+        "line_no": 2,
+        "replacement": "int max = -9999;"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "mastered",
+      "label": "解释充分",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "A",
+        "q4": "哨兵法的前提是元素都在该类型范围内；元素初值法只要数组非空就安全，不依赖数值范围。",
+        "q5": "A"
+      },
+      "expect": {
+        "understanding": "mastered",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "partial",
+      "label": "部分理解",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "哨兵法假设没有元素比哨兵更小，这由类型保证；用 arr[0] 则只依赖 n>=1，与数值范围无关。",
+        "q5": "A"
+      },
+      "expect": {
+        "understanding": "partial",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "contradictory",
+      "label": "解释矛盾",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "哨兵法对任何输入都绝对安全，不需要任何前提。",
+        "q5": "C"
+      },
+      "expect": {
+        "understanding": "limited",
+        "needs_ta_review": true
+      }
+    },
+    {
+      "profile_id": "insufficient",
+      "label": "证据不足",
+      "answers": {
+        "q1": "B",
+        "q2": "B",
+        "q3": "B",
+        "q4": "不知道",
+        "q5": "A"
+      },
+      "expect": {
+        "understanding": "insufficient",
+        "needs_ta_review": true
+      }
+    }
+  ],
+  "title_en": "Correct implementation: INT_MIN sentinel over all elements",
+  "behavior_notes_en": "Correct: `INT_MIN` sentinel plus a full traversal; the questionnaire probes sentinel preconditions and type ranges.",
+  "time_limit_minutes": 20
+}

@@ -1,0 +1,34 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+/tmp/
+nohup.out
+data/access/
+node_modules/
+frontend-vue/dist/
+.env.local
+.zcode/
+/datasets/
+
+# —— 本机其他项目 / 大文件产物，不随仓库发布 ——
+/c-tutor/
+/qwen-image-web/
+/rgb_repair_10/
+/previews/
+/artifacts/
+/design/
+/exams/
+/.agents/
+/.codex/
+
+# —— 运行时数据（tracked 的 20260002/03/05 样例保留，其余忽略）——
+/sessions/
+/locks/
+/generated/history/
+/generated/jobs/
+/generated/reuse-index.json
+/responses/llm_journal.jsonl
+/responses/20260001.json
+/evaluations/20260001.json
+/reviews/20260003.json

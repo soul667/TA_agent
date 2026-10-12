@@ -1,0 +1,272 @@
+{
+  "case_id": "C17",
+  "title": "先排序再取末位：返回值正确但修改了原数组",
+  "assignment_id": "c-find-max",
+  "case_version": 1,
+  "review_status": "reviewed",
+  "code": "int find_max(int arr[], int n) {\n    for (int i = 0; i < n - 1; i++) {\n        for (int j = 0; j < n - 1 - i; j++) {\n            if (arr[j] > arr[j + 1]) {\n                int tmp = arr[j];\n                arr[j] = arr[j + 1];\n                arr[j + 1] = tmp;\n            }\n        }\n    }\n    return arr[n - 1];\n}",
+  "code_quality": "incorrect",
+  "behavior_notes": "冒泡排序后返回 `arr[n-1]`：返回值总是正确的，但排序修改了原数组，违反作业“不允许修改原数组”的要求；调用方的 arr 在调用后变为升序，且时间复杂度为 $O(n²)$。",
+  "verification_points": [
+    "no-side-effect",
+    "api-contract",
+    "complexity"
+  ],
+  "input_coverage": [
+    "任意输入（返回值均正确）",
+    "调用方随后使用原数组（暴露副作用）",
+    "长度1",
+    "重复元素"
+  ],
+  "diagnosis": {
+    "summary": "返回值正确：排序后 `arr[n-1]` 确实是最大值。但冒泡排序在原地交换元素，修改了调用者的数组，违反作业“不允许修改原数组”的接口要求；调用方后续使用 arr 时顺序已被破坏。另引入了不必要的 $O(n²)$ 开销。",
+    "issues": [
+      {
+        "type": "side-effect",
+        "description": "排序修改了传入的原数组，违反“不允许修改原数组”的作业要求",
+        "evidence": "arr[j] 与 arr[j+1] 原地交换",
+        "severity": "high",
+        "description_en": "The function sorts the caller's array in place, violating the assignment's requirement not to modify the original array."
+      },
+      {
+        "type": "unnecessary-cost",
+        "description": "求最大值只需 $O(n)$ 一次遍历，排序引入 $O(n²)$ 开销",
+        "evidence": "双重循环冒泡排序",
+        "severity": "low"
+      }
+    ],
+    "summary_en": "The function bubble-sorts the caller's array and returns the last element. The value is correct, but the assignment forbids modifying the original array. The questionnaire focuses on the API contract."
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single_choice",
+      "question": "只看返回值：这个函数对任意输入都能返回数组的最大值吗？",
+      "choices": [
+        "能：排序后最后一个元素必然是最大值",
+        "不能：返回值经常出错",
+        "只有正数数组才正确",
+        "属于未定义行为"
+      ],
+      "target_issue": "no-side-effect",
+      "target_zh": "副作用",
+      "expected_answer": "A",
+      "code_lines": [
+        9
+      ],
+      "question_en": "Looking only at the return value: does this function return the maximum of the array for every input?",
+      "target_en": "no side effect",
+      "choices_en": [
+        "Yes: after sorting, the last element is necessarily the maximum",
+        "No: the return value is often wrong",
+        "It is correct only for positive arrays",
+        "It is undefined behavior"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single_choice",
+      "question": "尽管返回值正确，这个提交仍不满足作业要求，原因是什么？",
+      "choices": [
+        "作业明确要求不允许修改原数组，而排序在原地交换了元素",
+        "冒泡排序语法不合法",
+        "函数不能有双重循环",
+        "返回类型应该是 void"
+      ],
+      "target_issue": "api-contract",
+      "target_zh": "接口约定",
+      "expected_answer": "A",
+      "code_lines": [
+        4,
+        5,
+        6
+      ],
+      "question_en": "Even though the return value is correct, this submission still violates the assignment. Why?",
+      "target_en": "API contract",
+      "choices_en": [
+        "The assignment explicitly forbids modifying the original array, yet the sort swaps elements in place",
+        "The bubble sort syntax is invalid",
+        "Functions must not have nested loops",
+        "The return type should be void"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "single_choice",
+      "question": "调用 int $m$ = `find_max(a, 5)`; 之后，调用者手里的数组 $a$ 是什么状态？",
+      "choices": [
+        "被排成了升序，原始顺序丢失",
+        "保持原顺序不变",
+        "被清零",
+        "内容未定义"
+      ],
+      "target_issue": "api-contract",
+      "target_zh": "接口约定",
+      "expected_answer": "A",
+      "code_lines": [
+        2,
+        3,
+        4
+      ],
+      "question_en": "After int m = `find_max(a, 5)`;, in what state is the caller's array a?",
+      "target_en": "API contract",
+      "choices_en": [
+        "It is sorted ascending; the original order is lost",
+        "It keeps its original order",
+        "It is zeroed out",
+        "Its content is undefined"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "question": "“返回值正确”为什么还不足以判定这个函数符合要求？请从调用方（接口使用者的角度）说明。",
+      "target_issue": "no-side-effect",
+      "target_zh": "副作用",
+      "expected_answer": "函数的契约不仅包括返回值，还包括对输入的义务：作业要求不修改原数组。调用方在拿到最大值之后往往还要继续使用原数组（例如按原顺序处理、打印），排序副作用会悄悄破坏这些后续使用，而且这种破坏在函数返回值上完全看不出来。",
+      "code_lines": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "samples": [
+        {
+          "verdict": "correct",
+          "variants": [
+            "函数的契约不仅包括返回值，还包括对输入的义务：作业要求不修改原数组。调用方在拿到最大值之后往往还要继续使用原数组（例如按原顺序处理、打印），排序副作用会悄悄破坏这些后续使用，而且这种破坏在函数返回值上完全看不出来。",
+            "调用者之后还要用原数组，被排序后原顺序没了；接口不只是返回值，还有不改输入的义务。",
+            "契约包含不修改输入；副作用破坏调用方后续对 arr 的使用，返回值却看不出任何异常。"
+          ],
+          "note": "从调用方角度说明了接口契约的完整性",
+          "note_en": "Explained the integrity of the interface contract from the caller's perspective"
+        },
+        {
+          "verdict": "partial",
+          "variants": [
+            "因为题目说了不许改数组。",
+            "会改变数组内容。"
+          ],
+          "note": "指出了违约，但没有从调用方使用角度解释危害",
+          "note_en": "Identified the contract violation, but did not explain the harm from the caller's usage perspective"
+        },
+        {
+          "verdict": "wrong",
+          "variants": [
+            "返回值对了就够了，改数组无所谓。",
+            "调用者不会关心数组后来变成什么样。"
+          ],
+          "note": "忽略了副作用对调用方的破坏",
+          "note_en": "Ignored the side effect's harm to the caller"
+        },
+        {
+          "verdict": "insufficient",
+          "variants": [
+            "不知道",
+            "没考虑过调用方",
+            "不清楚"
+          ],
+          "note": "未提供可判断的证据",
+          "note_en": "No assessable evidence provided"
+        }
+      ],
+      "question_en": "Why is \"the return value is correct\" not sufficient to accept this function? Argue from the caller's perspective.",
+      "target_en": "no side effect"
+    },
+    {
+      "id": "q5",
+      "type": "code_variant",
+      "question": "假设修改：把第 4 行的 > 改成 <（排序方向反转），函数的返回值会怎样？（点击本题可在左侧预览修改后的代码）",
+      "question_en": "Hypothetical change: replace > with < on line 4 (the sort direction flips). What happens to the return value? (Click this question to preview the modified code on the left)",
+      "choices": [
+        "返回最小值：排序方向反转后，末位变成最小元素",
+        "仍返回最大值",
+        "会产生越界访问",
+        "无法通过编译"
+      ],
+      "choices_en": [
+        "It returns the minimum: after the sort direction flips, the last element is the smallest",
+        "It still returns the maximum",
+        "It produces an out-of-bounds access",
+        "The code no longer compiles"
+      ],
+      "target_issue": "wrong-comparison",
+      "target_zh": "比较方向",
+      "target_en": "wrong comparison",
+      "expected_answer": "A",
+      "code_lines": [
+        4
+      ],
+      "stage": "initial",
+      "variant": {
+        "line_no": 4,
+        "replacement": "if (arr[j] < arr[j + 1]) {"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "mastered",
+      "label": "解释充分",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "A",
+        "q4": "调用者之后还要用原数组，被排序后原顺序没了；接口不只是返回值，还有不改输入的义务。",
+        "q5": "A"
+      },
+      "expect": {
+        "understanding": "mastered",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "partial",
+      "label": "部分理解",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "契约包含不修改输入；副作用破坏调用方后续对 arr 的使用，返回值却看不出任何异常。",
+        "q5": "A"
+      },
+      "expect": {
+        "understanding": "partial",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "contradictory",
+      "label": "解释矛盾",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "返回值对了就够了，改数组无所谓。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "limited",
+        "needs_ta_review": true
+      }
+    },
+    {
+      "profile_id": "insufficient",
+      "label": "证据不足",
+      "answers": {
+        "q1": "B",
+        "q2": "B",
+        "q3": "B",
+        "q4": "不知道",
+        "q5": "A"
+      },
+      "expect": {
+        "understanding": "insufficient",
+        "needs_ta_review": true
+      }
+    }
+  ],
+  "title_en": "Sorts then takes the last element: correct value but mutates the caller's array",
+  "behavior_notes_en": "Bubble-sorts the caller's array and returns `arr[n - 1]`; the value is right but the required no-side-effect contract is broken.",
+  "time_limit_minutes": 20
+}

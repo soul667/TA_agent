@@ -1,0 +1,72 @@
+{
+  "student_id": "20260002",
+  "assignment_id": "c-find-max",
+  "diagnosis": {
+    "summary": "遍历范围与比较方向正确，但最大值初始化为常量 0，隐含了“数组中一定存在大于 0 的元素”这一未经验证的假设；当数组全为负数（如 [-5, -2, -10]）时返回 0，而 0 并不在数组中。",
+    "issues": [
+      {
+        "type": "initialization",
+        "description": "最大值初始值取常数 0 而非数组中的元素，对全负数数组必然给出错误结果",
+        "evidence": "int max = 0;",
+        "severity": "high"
+      },
+      {
+        "type": "edge-case",
+        "description": "未考虑全部元素为负数的边界情况，返回值不是数组中的任何元素",
+        "evidence": "输入 [-5, -2, -10] 时返回 0",
+        "severity": "high"
+      }
+    ]
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single_choice",
+      "question": "你的程序输入 [-5, -2, -10] 时会返回什么？",
+      "choices": [
+        "-2",
+        "-10",
+        "0",
+        "-5"
+      ],
+      "target_issue": "initialization",
+      "expected_answer": "C"
+    },
+    {
+      "id": "q2",
+      "type": "single_choice",
+      "question": "对上面这个返回结果，最准确的解释是什么？",
+      "choices": [
+        "循环少执行了一次，导致漏掉了最大的元素",
+        "最大值的初始值取了一个不在数组中的常数 0，而所有元素都比它小，max 从未被更新过",
+        "比较运算符的方向写反了",
+        "数组下标越界，读到了别的内存"
+      ],
+      "target_issue": "initialization",
+      "expected_answer": "B"
+    },
+    {
+      "id": "q3",
+      "type": "multiple_choice",
+      "question": "以下哪些输入会让你的程序返回错误结果？（多选）",
+      "choices": [
+        "[3, 1, 2]",
+        "[-4, -1, -6]",
+        "[5, -2, 9]",
+        "[-7, -3]"
+      ],
+      "target_issue": "edge-case",
+      "expected_answer": "B,D"
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "question": "在进入循环之前，你会选择什么值作为 max 的初始值？请说明理由：为什么这个初始值能保证后续比较对所有输入（包括全负数）都是公平的？",
+      "choices": null,
+      "target_issue": "initialization",
+      "expected_answer": "应选择 arr[0]（数组中的某个元素）。因为数组元素本身才是最大值的合法候选，用它做初值不会引入任何“数组之外”的假设，对全负数数组同样成立；而常数 0 是凭空引入的外部值。"
+    }
+  ],
+  "generated_at": "2026-09-12T09:46:59.351556Z",
+  "generated_by": "mock"
+}

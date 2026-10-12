@@ -1,0 +1,1 @@
+import{a as o,S as c}from"./index-D3wnnUD5.js";function r(s){const e=window.matchMedia(s),t=o(e.matches),n=a=>{t.value=a.matches};return e.addEventListener("change",n),c(()=>e.removeEventListener("change",n)),t}const i="(max-width: 767px)",h=()=>r(i);export{h as u};

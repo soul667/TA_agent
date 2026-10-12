@@ -1,0 +1,267 @@
+{
+  "case_id": "C18",
+  "title": "复合缺陷：初始化为 0 且循环越界",
+  "assignment_id": "c-find-max",
+  "case_version": 1,
+  "review_status": "reviewed",
+  "code": "int find_max(int arr[], int n) {\n    int max = 0;\n    for (int i = 1; i <= n; i++) {\n        if (arr[i] > max) {\n            max = arr[i];\n        }\n    }\n    return max;\n}",
+  "code_quality": "incorrect",
+  "behavior_notes": "两个独立缺陷同时存在：(1) 初值为常数 0，全负数输入返回数组外的 0；(2) 循环条件 $i <= n$，任何输入都多访问一次 `arr[n]`（越界未定义行为）。用于考察能否分别定位多个问题，而不是只指出一个就下整体结论。",
+  "verification_points": [
+    "multi-defect",
+    "initialization",
+    "out-of-bounds"
+  ],
+  "input_coverage": [
+    "全负数（暴露缺陷 1）",
+    "任意输入（均触发缺陷 2 的越界读）",
+    "长度1",
+    "整数边界"
+  ],
+  "diagnosis": {
+    "summary": "同时存在两个独立缺陷：其一，最大值初值取常数 0，全负数数组会返回不在数组中的 0；其二，循环条件 $i <= n$ 使任何输入都多访问一次 `arr[n]`，属于越界未定义行为。两者相互独立，修复其中一个不会消除另一个。",
+    "issues": [
+      {
+        "type": "initialization",
+        "description": "初值取常数 0，全负数输入时 $max$ 从不被数组元素更新，返回数组外的值",
+        "evidence": "int max = 0;",
+        "severity": "high",
+        "description_en": "Two independent defects: max = 0 (fails on all-negative inputs) and $i <= n$ (out-of-bounds read of `arr[n]`)."
+      },
+      {
+        "type": "out-of-bounds",
+        "description": "循环条件 $i <= n$ 多访问 `arr[n]`，对长度 $n$ 的数组越界（未定义行为）",
+        "evidence": "for (int i = 1; i <= n; i++)",
+        "severity": "high"
+      }
+    ],
+    "summary_en": "Two independent defects: max = 0 fails for all-negative inputs and $i <= n$ reads out of bounds. The questionnaire probes when each defect manifests and why fixing one does not fix the other."
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single_choice",
+      "question": "这段代码里有几个相互独立的缺陷？分别是什么？",
+      "choices": [
+        "两个：初值引入了数组外的假设；循环条件多访问了一个元素",
+        "一个：只有越界问题",
+        "一个：只有初始化问题",
+        "没有缺陷，程序正确"
+      ],
+      "target_issue": "multi-defect",
+      "target_zh": "多缺陷定位",
+      "expected_answer": "A",
+      "code_lines": [
+        2,
+        3
+      ],
+      "question_en": "How many independent defects are in this code, and what are they?",
+      "target_en": "multi defect",
+      "choices_en": [
+        "Two: the initial value assumes a value outside the array, and the loop condition accesses one element too many",
+        "One: only the out-of-bounds issue",
+        "One: only the initialization issue",
+        "None; the program is correct"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single_choice",
+      "question": "输入 `[-3, -7]`（$n$ = 2）时，循环实际访问了哪些下标？",
+      "choices": [
+        "1 和 2：其中 `arr[2]` 越界",
+        "0 和 1：正常范围",
+        "只有 1",
+        "0、1、2：其中 0 是多余的"
+      ],
+      "target_issue": "out-of-bounds",
+      "target_zh": "越界",
+      "expected_answer": "A",
+      "code_lines": [
+        3
+      ],
+      "question_en": "For the input `[-3, -7]` (n = 2), which indices does the loop actually access?",
+      "target_en": "out of bounds",
+      "choices_en": [
+        "1 and 2, where `arr[2]` is out of bounds",
+        "0 and 1: the normal range",
+        "Only 1",
+        "0, 1 and 2, where 0 is redundant"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "single_choice",
+      "question": "假设把循环条件修成 $i < n$，输入 `[-3, -7]` 时程序会返回什么？为什么？",
+      "choices": [
+        "0：初值 0 比所有元素都大，$max$ 从未被更新",
+        "-3：修复后返回正确结果",
+        "-7",
+        "仍然是未定义行为"
+      ],
+      "target_issue": "initialization",
+      "target_zh": "初始化",
+      "expected_answer": "A",
+      "code_lines": [
+        2
+      ],
+      "question_en": "Suppose the loop condition were fixed to $i < n$; for the input `[-3, -7]` what would the program return, and why?",
+      "target_en": "initialization",
+      "choices_en": [
+        "0: the initial 0 is larger than every element, so $max$ is never updated",
+        "-3: after the fix it returns the correct result",
+        "-7",
+        "Still undefined behavior"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "question": "请分别说明两个缺陷各自在什么输入下暴露、修复其中一个为何不能消除另一个。",
+      "target_issue": "multi-defect",
+      "target_zh": "多缺陷定位",
+      "expected_answer": "初始化缺陷在全负数输入下暴露（max 停留在 0，返回不在数组中的值），与正数数组无关；越界缺陷在任何输入下都会发生（总是多访问 arr[n]）。两者位于不同语句、机理独立，修复循环条件不改变初值假设，替换初值也不消除越界。",
+      "code_lines": [
+        2,
+        3
+      ],
+      "samples": [
+        {
+          "verdict": "correct",
+          "variants": [
+            "初始化缺陷在全负数输入下暴露（max 停留在 0，返回不在数组中的值），与正数数组无关；越界缺陷在任何输入下都会发生（总是多访问 arr[n]）。两者位于不同语句、机理独立，修复循环条件不改变初值假设，替换初值也不消除越界。",
+            "初值 0 只在全负数时出错；i<=n 则任何时候都多读一个元素。一个管“和谁比”，一个管“读到哪里”，互不相干。",
+            "全负数暴露初始化问题；所有输入都触发越界。两个缺陷在不同行，修一个另一个仍在。"
+          ],
+          "note": "准确定位了两个缺陷的暴露条件与独立性",
+          "note_en": "Accurately identified the trigger conditions and independence of the two defects"
+        },
+        {
+          "verdict": "partial",
+          "variants": [
+            "一个是初值问题，一个是越界问题。",
+            "负数时会错，循环也多跑了一次。"
+          ],
+          "note": "识别出两个缺陷，但没有分别说明暴露条件",
+          "note_en": "Identified both defects, but did not state their trigger conditions separately"
+        },
+        {
+          "verdict": "wrong",
+          "variants": [
+            "只有一个真正的缺陷，另一个修好后就消失了。",
+            "两个问题其实是同一个原因引起的。"
+          ],
+          "note": "没有认识到缺陷的相互独立性",
+          "note_en": "Failed to recognize that the defects are independent of each other"
+        },
+        {
+          "verdict": "insufficient",
+          "variants": [
+            "不知道",
+            "只看出一处问题",
+            "不清楚"
+          ],
+          "note": "未提供可判断的证据",
+          "note_en": "No assessable evidence provided"
+        }
+      ],
+      "question_en": "Explain for each of the two defects under which inputs it manifests, and why fixing one does not remove the other.",
+      "target_en": "multi defect"
+    },
+    {
+      "id": "q5",
+      "type": "code_variant",
+      "question": "假设修改：只把第 3 行的 $i <= n$ 改成 $i < n$（第 2 行仍是 $max$ = 0）。对输入 `[-3, -7]`（$n$ = 2），程序返回什么？（点击本题可在左侧预览修改后的代码）",
+      "question_en": "Hypothetical change: replace $i <= n$ with $i < n$ on line 3 only (line 2 is still max = 0). For the input `[-3, -7]` (n = 2), what does the program return? (Click this question to preview the modified code on the left)",
+      "choices": [
+        "-3，两个缺陷都被修复",
+        "0，越界消除了，但初值缺陷仍在",
+        "-7，返回最后一个元素",
+        "仍然越界崩溃"
+      ],
+      "choices_en": [
+        "-3 — both defects are fixed",
+        "0 — the out-of-bounds access is gone but the initialization defect remains",
+        "-7 — the last element is returned",
+        "It still crashes with an out-of-bounds access"
+      ],
+      "target_issue": "multi-defect",
+      "target_zh": "多缺陷分离",
+      "target_en": "multi defect",
+      "expected_answer": "B",
+      "code_lines": [
+        3
+      ],
+      "stage": "initial",
+      "variant": {
+        "line_no": 3,
+        "replacement": "for (int i = 1; i < n; i++) {"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "mastered",
+      "label": "解释充分",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "A",
+        "q4": "初值 0 只在全负数时出错；i<=n 则任何时候都多读一个元素。一个管“和谁比”，一个管“读到哪里”，互不相干。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "mastered",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "partial",
+      "label": "部分理解",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "全负数暴露初始化问题；所有输入都触发越界。两个缺陷在不同行，修一个另一个仍在。",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "partial",
+        "needs_ta_review": false
+      }
+    },
+    {
+      "profile_id": "contradictory",
+      "label": "解释矛盾",
+      "answers": {
+        "q1": "A",
+        "q2": "A",
+        "q3": "B",
+        "q4": "只有一个真正的缺陷，另一个修好后就消失了。",
+        "q5": "A"
+      },
+      "expect": {
+        "understanding": "limited",
+        "needs_ta_review": true
+      }
+    },
+    {
+      "profile_id": "insufficient",
+      "label": "证据不足",
+      "answers": {
+        "q1": "B",
+        "q2": "B",
+        "q3": "B",
+        "q4": "不知道",
+        "q5": "B"
+      },
+      "expect": {
+        "understanding": "insufficient",
+        "needs_ta_review": true
+      }
+    }
+  ],
+  "title_en": "Composite defects: initialization to 0 plus an out-of-bounds loop",
+  "behavior_notes_en": "Two independent defects (max = 0 and $i <= n$); the questionnaire probes defect separation.",
+  "time_limit_minutes": 20
+}
