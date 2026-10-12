@@ -3,7 +3,7 @@
 
 作业很短、写法被题意固定时，两份独立写的代码也会很像，所以光看相似度没有意义。
 这里的证据是「两份代码共有、而全班很少有人写过」的行：同样的拼写错误、同样的注释、同样古怪的写法。
-只比较同一道题的文件（按内容里的关键词归类，不看文件名）；注释保留，空白压成一个空格。
+不同学生的任意两份文件都会比较；一行有多少人写过按「学生」计（同一人的几份递进版本不重复算）；注释保留，空白去掉。
 
 用法：python similar.py workspace/<作业名> [--min-shared 3] [--rare 3]
   --min-shared  至少共有多少行罕见代码才列出（默认 3）
@@ -22,17 +22,6 @@ from pathlib import Path
 TOKEN = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])\'|[A-Za-z_]\w*|\d+\.?\d*|\S', re.S)
 MIN_TOKENS = 40          # 太短的程序不比较
 MIN_LINE = 8             # 太短的行（`}`、`return 0;`）不算证据
-
-
-def task_of(code: str) -> str:
-    low = code.lower()
-    if "celsius" in low or "fahrenheit" in low or "temperature" in low:
-        return "temperature"
-    if "grade" in low or "letter" in low:
-        return "grade"
-    if "%p" in low or "long" in low:
-        return "calc_long"
-    return "other"
 
 
 def lines_of(code: str) -> dict[str, str]:
@@ -55,20 +44,23 @@ def compare(students: dict, min_shared: int = 3, rare: int = 3) -> list[dict]:
         for f in s["files"]:
             toks = code_tokens(f["code"])
             if not f["name"].endswith(".txt") and len(toks) >= MIN_TOKENS:
-                files.append((sid, f["name"], task_of(f["code"]), lines_of(f["code"]), toks))
-    owners = Counter(key for x in files for key in x[3])
+                files.append((sid, f["name"], lines_of(f["code"]), toks))
+    mine = {}
+    for sid, _, lines, _ in files:
+        mine.setdefault(sid, set()).update(lines)
+    owners = Counter(key for keys in mine.values() for key in keys)    # 每一行有多少个学生写过
     best = {}
     for x, y in combinations(files, 2):
-        if x[0] == y[0] or x[2] != y[2]:
+        if x[0] == y[0]:
             continue
-        shared = [key for key in x[3] if key in y[3] and owners[key] <= rare]
+        shared = [key for key in x[2] if key in y[2] and owners[key] <= rare]
         if len(shared) < min_shared:
             continue
-        pair = {"a": x[0], "b": y[0], "task": x[2], "file_a": x[1], "file_b": y[1],
-                "ratio": round(difflib.SequenceMatcher(None, x[4], y[4], autojunk=False).ratio(), 2),
-                "shared_count": len(shared), "lines_a": len(x[3]), "lines_b": len(y[3]),
-                "shared": [{"line": x[3][key], "students": owners[key]} for key in shared[:6]]}
-        key = (x[0], y[0], x[2])
+        pair = {"a": x[0], "b": y[0], "file_a": x[1], "file_b": y[1],
+                "ratio": round(difflib.SequenceMatcher(None, x[3], y[3], autojunk=False).ratio(), 2),
+                "shared_count": len(shared), "lines_a": len(x[2]), "lines_b": len(y[2]),
+                "shared": [{"line": x[2][key], "students": owners[key]} for key in shared[:6]]}
+        key = (x[0], y[0])
         if key not in best or best[key]["shared_count"] < pair["shared_count"]:
             best[key] = pair
     return sorted(best.values(), key=lambda p: (-p["shared_count"], -p["ratio"], p["a"]))
@@ -85,7 +77,7 @@ def main(argv=None):
     (args.workspace / "similar.json").write_text(json.dumps(pairs, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"共有 ≥{args.min_shared} 行罕见代码的学生对：{len(pairs)} 组 → {args.workspace / 'similar.json'}")
     for p in pairs[:15]:
-        print(f"  {p['a']} ~ {p['b']}  {p['task']:11} 共 {p['shared_count']} 行（共 {p['lines_a']}/{p['lines_b']} 行） 整体 {p['ratio']:.2f}")
+        print(f"  {p['a']} ~ {p['b']}  {p['file_a']} ~ {p['file_b']}  共 {p['shared_count']} 行（共 {p['lines_a']}/{p['lines_b']} 行） 整体 {p['ratio']:.2f}")
 
 
 if __name__ == "__main__":

@@ -346,7 +346,7 @@ function renderFamilies() {
   const pairs = PAIRS.length ? el("details", { class: "pairs" },
     el("summary", {}, `脚本找出的其余雷同对（${PAIRS.length} 组，共有的是全班很少有人写的行；多数只是写法被题意固定，仅供参考）`),
     PAIRS.map(p => el("div", { class: "pair" }, el("a", { href: "#" + p.a, onclick: e => { e.preventDefault(); open(p.a); } }, p.a), " ~ ",
-      el("a", { href: "#" + p.b, onclick: e => { e.preventDefault(); open(p.b); } }, p.b), `　${p.task}　共有 ${p.shared_count} 行　整体相似 ${p.ratio}`,
+      el("a", { href: "#" + p.b, onclick: e => { e.preventDefault(); open(p.b); } }, p.b), `　${p.file_a} ~ ${p.file_b}　共有 ${p.shared_count} 行　整体相似 ${p.ratio}`,
       el("div", {}, p.shared.slice(0, 3).map(s => el("div", {}, el("code", {}, s.line), ` （全班 ${s.students} 人写过）`)))))) : null;
   put($("fam-view"), cards, pairs, FAM.length ? null : el("p", { class: "none" }, "还没有整理写法家族。"));
 }
