@@ -7,3 +7,6 @@
 __pycache__/
 .venv/
 .env.local
+
+# 打包产物：站点 zip 里有学生姓名、学号和代码
+/dist/

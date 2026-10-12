@@ -23,7 +23,16 @@ def load(name):
     return module
 
 
-unpack, build, similar = load("unpack"), load("build"), load("similar")
+unpack, build, similar, pack = load("unpack"), load("build"), load("similar"), load("pack")
+
+
+def load_from(folder: Path) -> dict:
+    mods = {}
+    for name in ("unpack", "build"):
+        spec = importlib.util.spec_from_file_location(f"installed_{name}", folder / f"{name}.py")
+        mods[name] = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mods[name])
+    return mods
 
 
 def make_zip(entries) -> bytes:
@@ -311,6 +320,55 @@ class PageTest(Case):
         for stem in build.FONTS:
             self.assertGreater((assets / "fonts" / f"{stem}.woff2").stat().st_size, 1000, stem)
         self.assertTrue((assets / "fonts" / "LICENSE-OFL.txt").exists())
+
+
+class PackTest(Case):
+    def test_site_zip_is_self_contained_and_noindex(self):
+        ws, students = self.run_unpack({bb("12610001", "main.c"): "int x;\nint main(){return x;}\n"})
+        (ws / "papers").mkdir()
+        (ws / "papers/12610001.json").write_text(json.dumps({**GOOD, "fingerprint": students["12610001"]["fingerprint"]}), encoding="utf-8")
+        (ws / "reviews").mkdir()
+        build.build(ws)
+        out = self.tmp / "dist" / "site.zip"
+        names = pack.site(ws, out)
+        self.assertEqual(sorted(names), sorted(["index.html", "quiz.html", "review.html", "robots.txt", "_headers", "部署说明.txt"]))
+        with zipfile.ZipFile(out) as z:
+            self.assertIsNone(z.testzip())
+            for page in ("index.html", "quiz.html", "review.html"):
+                self.assertIn('name="robots" content="noindex, nofollow"', z.read(page).decode("utf-8"), page)
+            index = z.read("index.html").decode("utf-8")
+            self.assertIn('href="quiz.html"', index)
+            self.assertIn('href="review.html"', index)
+            self.assertEqual(z.read("robots.txt").decode(), "User-agent: *\nDisallow: /\n")
+            self.assertNotIn("https://", z.read("quiz.html").decode("utf-8").split("</style>")[0].replace("http://www.w3.org", ""))
+
+    def test_site_without_review_has_no_review_link(self):
+        ws, _ = self.run_unpack({bb("12610001", "main.c"): "int x;\n"})
+        build.build(ws)
+        names = pack.site(ws, self.tmp / "s.zip")
+        self.assertNotIn("review.html", names)
+        with zipfile.ZipFile(self.tmp / "s.zip") as z:
+            self.assertNotIn("review.html", z.read("index.html").decode("utf-8"))
+
+    def test_skill_zip_has_everything_and_nothing_else(self):
+        out = self.tmp / "skill.zip"
+        names = pack.skill(out)
+        self.assertIn("ta-quiz/SKILL.md", names)
+        for need in ("scripts/unpack.py", "scripts/build.py", "scripts/similar.py", "scripts/pack.py", "assets/quiz.html",
+                     "assets/review.html", "assets/shared.css", "assets/shared.js", "assets/fonts/TASans-Regular.woff2"):
+            self.assertIn("ta-quiz/" + need, names)
+        self.assertFalse([n for n in names if "__pycache__" in n or n.endswith(".pyc") or "workspace" in n])
+        # 解压出来就能独立运行：拆包并生成页面
+        with zipfile.ZipFile(out) as z:
+            z.extractall(self.tmp / "installed")
+        archive = self.tmp / "hw.zip"
+        archive.write_bytes(make_zip({bb("12610001", "main.c"): "int main(){return 0;}\n"}))
+        installed = load_from(self.tmp / "installed/ta-quiz/scripts")
+        ws = self.tmp / "ws2"
+        with contextlib.redirect_stdout(io.StringIO()):
+            installed["unpack"].main([str(archive), "--out", str(ws)])
+            installed["build"].build(ws)
+        self.assertGreater((ws / "quiz.html").stat().st_size, 1_000_000)   # 字体被嵌进去了
 
 
 if __name__ == "__main__":

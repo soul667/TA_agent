@@ -42,6 +42,20 @@ cp -r .claude/skills/ta-quiz ~/.claude/skills/
 
 想换题、改难度、出英文版，直接在对话里说，Claude 改完会重新生成页面。
 
+## 打包与部署
+
+```bash
+python3 .claude/skills/ta-quiz/scripts/pack.py site workspace/<作业名>   # → dist/<作业名>-site.zip
+python3 .claude/skills/ta-quiz/scripts/pack.py skill                     # → dist/ta-quiz-skill.zip
+```
+
+- **站点 zip**：`index.html`（入口）、`quiz.html`、`review.html`，纯静态，字体已嵌在页面里，不联网。解压后丢到任何静态主机
+  （Netlify 拖拽、Cloudflare Pages、nginx）即可，本地双击 `index.html` 也能用。
+- **技能 zip**：在 Claude 的「设置 → Skills」里上传，之后在对话里拖入作业 ZIP 即可。
+
+站点里有学生的姓名、学号和代码。页面带 noindex、`robots.txt` 禁止收录，但这不是访问控制：请放在需要登录的地方
+（Cloudflare Access、Netlify 密码保护、学校内网），不要放到公开的 GitHub Pages。
+
 ## 目录
 
 ```
@@ -50,6 +64,7 @@ cp -r .claude/skills/ta-quiz ~/.claude/skills/
 ├── scripts/unpack.py   拆 ZIP → 每人一份带行号的代码（只读文本，不运行学生文件）
 ├── scripts/similar.py  找出代码雷同的学生对（只看全班罕见的共同行）
 ├── scripts/build.py    检查题目和线索的格式 → 生成 quiz.html、review.html
+├── scripts/pack.py     打包：可部署的静态站点 zip、技能 zip
 └── assets/
     ├── quiz.html、review.html   两个页面的模板
     ├── shared.css、shared.js    共用的代码组件（C 语法高亮、行号、被问到的行高亮、复制）和字体栈

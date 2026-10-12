@@ -120,3 +120,11 @@ TA 想知道谁可能用了 AI 时，**不要凭「写得太好」下判断**：
 （两个页面都把字体和代码组件嵌在文件里，不需要联网；改页面样式时改 `assets/` 下的模板、`shared.css`、`shared.js`，不要在页面里再引外部字体）：
 名单按「需核实 / 建议追问」排序，可按线索类型筛选；点开一位学生看到真实代码行、原因和可以直接问的话，并能跳到他的抽查题；
 另有一个「写法与雷同」标签页。把结果告诉 TA 时说清：这是线索不是结论，自述用 AI 算不算违规要看 Blackboard 上的 AI 使用政策。
+
+## 5. 打包与部署（TA 要「一个 zip 直接部署」时）
+
+- `python3 <skill>/scripts/pack.py site <ws>` → `dist/<作业名>-site.zip`：`index.html` + `quiz.html` + `review.html`，纯静态，
+  解压后放到任何静态主机即可，字体已嵌入、不联网。要先跑过 `build.py`。
+- `python3 <skill>/scripts/pack.py skill` → `dist/ta-quiz-skill.zip`：技能自己的压缩包，在 Claude 的「设置 → Skills」里上传。
+- **提醒 TA**：站点里有学生的姓名、学号和代码。页面带 noindex、robots.txt 禁止收录，但这不是访问控制，
+  要放在需要登录的地方（Cloudflare Access、Netlify 密码保护、学校内网），不要放到公开的 GitHub Pages。
