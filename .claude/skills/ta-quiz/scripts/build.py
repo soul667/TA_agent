@@ -185,6 +185,10 @@ def build(root: Path) -> tuple[str, bool]:
         lines.append(f"还没出题（或格式有误）：{', '.join(todo)}")
     if stale:
         lines.append(f"代码已变、题目可能过期：{', '.join(stale)}")
+    letters = [q["answer"] for p in papers.values() for q in p["questions"] if q["type"] == "single"]
+    if len(letters) >= 8 and max(letters.count(x) for x in set(letters)) > len(letters) * 0.5:
+        top = max(set(letters), key=letters.count)
+        lines.append(f"提醒：{letters.count(top)} / {len(letters)} 道单选题的答案都是 {top}，请把正确选项的位置打乱，免得一猜就中")
     if (root / "reviews").is_dir():
         reviews, review_problems, review_stale = load_dir(root, "reviews", students, check_review)
         problems += review_problems

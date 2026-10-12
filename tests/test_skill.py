@@ -91,6 +91,15 @@ class UnpackTest(Case):
         self.assertIn("无可读代码：12610002", index)
         self.assertFalse((self.tmp / "escape.c").exists())
 
+    def test_unsupported_archives_are_reported(self):
+        _, students = self.run_unpack({
+            bb("12610001", "pa3.7z"): b"7z\xbc\xaf\x27\x1c" + b"\0" * 20,
+            bb("12610002", "pa3.zip"): b"Rar!\x1a\x07\x01\x00" + b"\0" * 20,
+        })
+        self.assertTrue(any("7z 格式不支持" in n for n in students["12610001"]["notes"]))
+        self.assertTrue(any("实际是 RAR 文件" in n for n in students["12610002"]["notes"]))
+        self.assertEqual(students["12610001"]["files"], [])
+
     def test_latest_attempt_and_inline_text(self):
         _, students = self.run_unpack({
             bb("12610001", "old.c", stamp="2026-09-12-09-00-00"): "int main(){return 8;}",
@@ -174,6 +183,16 @@ class BuildTest(Case):
         self.assertEqual(paper["questions"][1]["answer"], "A,C")
         self.assertEqual(paper["questions"][0]["lines"], ["main.c:1"])
         self.assertFalse(paper["stale"])
+
+    def test_warns_when_single_choice_answers_are_all_the_same_letter(self):
+        question = {"type": "single", "question": "x?", "choices": ["对", "错", "不知道"], "answer": "A", "lines": ["main.c:1"]}
+        text = {"type": "text", "question": "为什么？", "answer": "因为", "lines": ["main.c:1"]}
+        students = json.loads((self.ws / "students.json").read_text(encoding="utf-8"))["students"]
+        for sid, s in students.items():
+            self.write(sid, {"fingerprint": s["fingerprint"], "summary": "s", "questions": [question] * 4 + [text]})
+        report, ok = build.build(self.ws)
+        self.assertTrue(ok, report)
+        self.assertIn("8 / 8 道单选题的答案都是 A", report)
 
     def test_student_text_cannot_break_out_of_data_block(self):
         self.write("12610001", {**GOOD, "fingerprint": self.fp})
