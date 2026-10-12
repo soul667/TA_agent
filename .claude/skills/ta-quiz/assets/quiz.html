@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>抽查题</title>
+<style>
+:root {
+  --bg: #f7f7f5; --card: #fff; --fg: #1d1d1b; --muted: #6b6b66; --line: #e4e4df;
+  --accent: #1f5fbf; --on-accent: #fff; --accent-soft: #e8f0fc; --hit: #fff4cc; --flash: #ffd966;
+  --warn-bg: #fff4e5; --warn: #9a5b00; --key-bg: #eef7ee; --key: #1f6b2c;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161615; --card: #1f1f1d; --fg: #ececea; --muted: #a3a39d; --line: #34342f;
+    --accent: #7aa7ff; --on-accent: #0d1a30; --accent-soft: #1f2a3d; --hit: #3a3317; --flash: #6b5a12;
+    --warn-bg: #3a2a10; --warn: #f3c36b; --key-bg: #17301b; --key: #93d69e;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; }
+header { background: var(--card); border-bottom: 1px solid var(--line); padding: 14px 16px; }
+.bar { max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+h1 { font-size: 17px; margin: 0; flex: 1 1 260px; }
+h1 small { display: block; font-weight: normal; color: var(--muted); font-size: 13px; }
+form { display: flex; gap: 8px; flex: 1 1 280px; max-width: 420px; }
+input { flex: 1; min-width: 0; font: inherit; font-size: 17px; padding: 8px 12px; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--bg); color: var(--fg); letter-spacing: .03em; }
+input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--card); color: var(--fg); cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.hint { color: var(--muted); padding: 40px 0; text-align: center; }
+.hint button { margin: 4px; font-family: var(--mono); }
+.who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 12px; }
+.who h2 { margin: 0; font-size: 22px; letter-spacing: .02em; }
+.who .meta { color: var(--muted); font-size: 13px; }
+.who .tools { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.toggle { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
+.warn { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+.grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 960px) {
+  .grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .code { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; }
+}
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.key { display: none; background: var(--key-bg); color: var(--key); border-radius: 8px; padding: 8px 12px; margin-top: 10px; font-size: 14px; white-space: pre-wrap; }
+body.show-key .key { display: block; }
+.summary { margin: 0 0 14px; }
+ol.qs { margin: 0; padding: 0; list-style: none; counter-reset: q; }
+ol.qs > li { counter-increment: q; padding: 14px 0; border-top: 1px solid var(--line); }
+ol.qs > li:first-child { border-top: 0; padding-top: 0; }
+.qhead { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; }
+.qhead::before { content: counter(q) "."; font-weight: 600; margin-right: 2px; }
+.tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.ref { font: 12px var(--mono); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); background: none; color: var(--muted); cursor: pointer; }
+.qtext { white-space: pre-wrap; }
+ul.choices { list-style: none; padding: 0; margin: 6px 0 0; }
+ul.choices li { padding: 3px 0 3px 1.8em; text-indent: -1.8em; white-space: pre-wrap; }
+.blank { height: 72px; border: 1px dashed var(--line); border-radius: 8px; margin-top: 8px; }
+code { font-family: var(--mono); font-size: .92em; background: var(--accent-soft); padding: 0 4px; border-radius: 4px; }
+.file { font: 600 13px var(--mono); margin: 0 0 6px; color: var(--muted); }
+.file + .src, .src + .file { margin-top: 14px; }
+.src { font: 13px/1.55 var(--mono); overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+.src div { display: flex; white-space: pre; padding-right: 12px; transition: background .3s; }
+.src span.no { flex: 0 0 auto; width: 3.2em; padding-right: .8em; text-align: right; color: var(--muted); user-select: none; }
+.src div.hit { background: var(--hit); }
+.src div.flash { background: var(--flash); }
+@media print {
+  header, .tools, .warn { display: none !important; }
+  body { background: #fff; color: #000; }
+  main { padding: 0; }
+  .grid { display: block; }
+  .card { border: 0; padding: 0; }
+  .code { position: static; max-height: none; overflow: visible; margin-top: 18px; break-before: page; }
+  .src div { white-space: pre-wrap; }
+  ol.qs > li { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1 id="title"></h1>
+    <form id="find" autocomplete="off">
+      <input id="sid" list="sids" placeholder="输入学号" inputmode="numeric" autofocus aria-label="学号">
+      <button class="primary">查看</button>
+    </form>
+    <datalist id="sids"></datalist>
+  </div>
+</header>
+<main id="view"></main>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById("data").textContent);
+const view = document.getElementById("view");
+const TYPE = { single: "单选", multi: "多选", text: "简答" };
+
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") e.className = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const k of kids) if (k !== null && k !== undefined) e.append(k);
+  return e;
+}
+// 题面里的 `代码` 渲染成等宽字体；一律走 textContent，不解析 HTML
+function rich(text) {
+  const frag = document.createDocumentFragment();
+  String(text).split(/`([^`\n]+)`/).forEach((part, i) => frag.append(i % 2 ? el("code", {}, part) : part));
+  return frag;
+}
+function expand(ref) {                       // "main.c:7-9" -> ["main.c:7","main.c:8","main.c:9"]
+  const i = ref.lastIndexOf(":"), name = ref.slice(0, i), [a, b] = ref.slice(i + 1).split("-").map(Number);
+  return Array.from({ length: (b || a) - a + 1 }, (_, k) => `${name}:${a + k}`);
+}
+function jump(ref) {
+  const rows = expand(ref).map(r => document.querySelector(`[data-ref="${CSS.escape(r)}"]`)).filter(Boolean);
+  if (!rows.length) return;
+  rows[0].scrollIntoView({ block: "center", behavior: "smooth" });
+  rows.forEach(r => { r.classList.add("flash"); setTimeout(() => r.classList.remove("flash"), 1200); });
+}
+
+const ids = Object.keys(D.students);
+const done = Object.keys(D.papers).length, total = ids.filter(id => D.students[id].files.length).length;
+document.title = `抽查题 · ${D.assignment || D.archive}`;
+document.getElementById("title").append(D.assignment || D.archive,
+  el("small", {}, `${ids.length} 名学生 · 已出题 ${done} / ${total}`));
+const list = document.getElementById("sids");
+ids.forEach(id => list.append(el("option", { value: id }, D.students[id].name || "")));
+
+function hint(...kids) { view.replaceChildren(el("p", { class: "hint" }, ...kids)); }
+
+function show(query) {
+  const q = query.trim();
+  if (!q) return hint("输入学号查看该生的个性化抽查题。可以只输入学号末几位或姓名。");
+  let sid = D.students[q] ? q : null;
+  if (!sid) {
+    const hits = ids.filter(id => id.endsWith(q) || id.includes(q) || (D.students[id].name || "").includes(q));
+    if (hits.length === 1) sid = hits[0];
+    else if (hits.length > 1) return hint(`匹配到 ${hits.length} 人：`, el("br"),
+      ...hits.slice(0, 30).map(id => el("button", { onclick: () => go(id) }, `${id} ${D.students[id].name || ""}`)));
+    else return hint(`名单里没有「${q}」。`);
+  }
+  if (location.hash.slice(1) !== sid) history.replaceState(null, "", "#" + sid);
+  document.getElementById("sid").value = sid;
+  render(sid);
+}
+function go(id) { show(id); }
+
+function render(sid) {
+  const s = D.students[sid], p = D.papers[sid];
+  const head = el("div", { class: "who" }, el("h2", {}, sid + (s.name ? " " + s.name : "")),
+    el("span", { class: "meta" }, [s.files.map(f => f.name).join("、") || "无代码", s.submitted].filter(Boolean).join(" · ")));
+  const parts = [head];
+  if (!s.files.length) {
+    parts.push(el("p", { class: "warn" }, "这份提交里没有可读的代码或文字，请核对原始提交。"));
+    return view.replaceChildren(...parts);
+  }
+  if (!p) {
+    parts.push(el("p", { class: "warn" }, `还没给这位同学出题。在对话里对 agent 说「给 ${sid} 出题」，然后重新打开本页面。`));
+  } else {
+    const box = el("input", { type: "checkbox", onchange: e => document.body.classList.toggle("show-key", e.target.checked) });
+    box.checked = document.body.classList.contains("show-key");
+    head.append(el("span", { class: "tools" },
+      el("label", { class: "toggle" }, box, "显示答案"),
+      el("button", { onclick: () => print() }, "打印")));
+    if (p.stale) parts.push(el("p", { class: "warn" }, "这位同学的代码在出题后有变化，题目可能对不上，建议让 agent 重新出题。"));
+  }
+  const hits = new Set((p ? p.questions : []).flatMap(q => (q.lines || []).flatMap(expand)));
+  const qs = p ? el("section", { class: "card" },
+    p.summary ? el("div", { class: "key summary" }, "TA 备注：" + p.summary) : null,
+    el("ol", { class: "qs" }, ...p.questions.map(q => el("li", {},
+      el("div", { class: "qhead" }, el("span", { class: "tag" }, TYPE[q.type] || q.type),
+        ...(q.lines || []).map(r => el("button", { class: "ref", type: "button", onclick: () => jump(r) }, r))),
+      el("div", { class: "qtext" }, rich(q.question)),
+      q.choices ? el("ul", { class: "choices" }, ...q.choices.map((c, i) => el("li", {}, String.fromCharCode(65 + i) + ". ", rich(c)))) : el("div", { class: "blank" }),
+      el("div", { class: "key" }, "答案：", rich(q.answer), q.explain ? el("br") : null, q.explain ? rich(q.explain) : null))))) : null;
+  const code = el("section", { class: "card code" }, ...s.files.flatMap(f => [
+    el("p", { class: "file" }, f.name),
+    el("div", { class: "src" }, ...f.code.replace(/\n$/, "").split("\n").map((line, i) => {
+      const ref = `${f.name}:${i + 1}`;
+      return el("div", { "data-ref": ref, class: hits.has(ref) ? "hit" : "" }, el("span", { class: "no" }, String(i + 1)), line || " ");
+    }))]));
+  parts.push(el("div", { class: "grid" }, qs, code));
+  view.replaceChildren(...parts.filter(Boolean));
+}
+
+document.getElementById("find").addEventListener("submit", e => { e.preventDefault(); show(document.getElementById("sid").value); });
+addEventListener("hashchange", () => show(decodeURIComponent(location.hash.slice(1))));
+show(decodeURIComponent(location.hash.slice(1)));
+</script>
+</body>
+</html>
