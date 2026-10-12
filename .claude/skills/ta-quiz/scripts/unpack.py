@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html
 import io
 import json
 import os
@@ -21,16 +22,14 @@ import re
 import sys
 import zipfile
 from collections import defaultdict
-from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 
 BLACKBOARD = re.compile(
-    r"^(?P<label>.+)_(?P<sid>[0-9]{4,20})_attempt_"
+    r"^.+_(?P<sid>[0-9]{4,20})_attempt_"
     r"(?P<stamp>\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})(?P<tail>.*)$")
 SID = re.compile(r"(?<!\d)\d{6,20}(?!\d)")
 CODE_EXT = {".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hh", ".py", ".java", ".js", ".ts",
             ".go", ".rs", ".cs", ".kt", ".swift", ".m", ".r", ".sql", ".sh", ".txt", ".md"}
-LANG = {".h": "c", ".hpp": "cpp", ".hh": "cpp", ".cc": "cpp", ".cxx": "cpp", ".txt": "text"}
 MAX_READ_BYTES = 64 * 1024 * 1024   # 整个包里实际读取的总量
 MAX_FILE_BYTES = 512 * 1024         # 单个源文件
 MAX_ENTRIES = 10000
@@ -51,23 +50,6 @@ def decode(raw: bytes) -> str | None:
     return None
 
 
-class _HTMLText(HTMLParser):
-    def __init__(self):
-        super().__init__(convert_charrefs=True)
-        self.parts = []
-
-    def handle_data(self, data):
-        self.parts.append(data)
-
-    def handle_starttag(self, tag, attrs):
-        if tag in {"p", "br", "div", "pre"}:
-            self.parts.append("\n")
-
-    def handle_endtag(self, tag):
-        if tag in {"p", "div", "pre"}:
-            self.parts.append("\n")
-
-
 def parse_metadata(text: str) -> dict:
     """Blackboard 每次提交附带的 .txt：姓名、作业名、文本框内容。"""
     def field(name):
@@ -77,10 +59,9 @@ def parse_metadata(text: str) -> dict:
     body = m.group(1).strip() if m else ""
     if body == "There is no student submission text data for this assignment.":
         body = ""
-    if re.search(r"<(?:p|br|div|pre)(?:\s|>|/)", body, re.I):
-        parser = _HTMLText()
-        parser.feed(body)
-        body = "".join(parser.parts).strip()
+    if re.search(r"<(?:p|br|div|pre)(?:\s|>|/)", body, re.I):  # 富文本：段落换成换行，再还原 &lt; 等实体
+        body = re.sub(r"<br\s*/?>|</?(?:p|div|pre)\b[^>]*>", "\n", body, flags=re.I)
+        body = html.unescape(re.sub(r"<[^>]+>", "", body)).strip()
     name = re.sub(r"\s*\(\d+\)\s*$", "", field("Name"))
     return {"name": name, "assignment": field("Assignment"), "text": body.replace("\xa0", " ")}
 
@@ -201,7 +182,7 @@ def numbered(text: str, suffix: str) -> str:
     width = len(str(len(lines)))
     body = "\n".join(f"{n:>{width}} | {line}" for n, line in enumerate(lines, 1))
     fence = "`" * max(3, max((len(r) for r in re.findall(r"`+", text)), default=0) + 1)
-    return f"{fence}{LANG.get(suffix, suffix.lstrip('.'))}\n{body}\n{fence}"
+    return f"{fence}{suffix.lstrip('.')}\n{body}\n{fence}"
 
 
 def fingerprint(s: dict) -> str:

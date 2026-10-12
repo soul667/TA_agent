@@ -1,21 +1,9 @@
-# 出题工作目录：含学生姓名、学号和代码，不要提交
+# 出题工作目录与作业包：含学生姓名、学号和代码，不要提交
 /workspace/
+/datasets/
 *.zip
 !/examples/demo.zip
 
 __pycache__/
-*.pyc
+.venv/
 .env.local
-
-# 旧版本留在本机的数据与构建目录（可能含学生信息）
-/datasets/
-/data/
-/generated/
-/responses/
-/evaluations/
-/reviews/
-/sessions/
-/locks/
-/.venv/
-node_modules/
-/frontend-vue/
