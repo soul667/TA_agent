@@ -4,200 +4,181 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>抽查题</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap">
 <style>
-/* 布局：首页是全班名单；点开一位学生，桌面上并排两张纸——左边抽查卷，右边附录的学生代码。
-   墨色分工：蓝黑墨水写题，钢笔蓝管交互，红笔只用于答案，荧光黄标出被问到的代码行。 */
+/*__FONTS__*/
+/*__SHARED_CSS__*/
+/* 布局：首页是全班名单；点开一位学生，桌面上并排两栏——左边抽查卷，右边学生代码。
+   一个强调色（钢笔蓝）负责交互，红笔只用于答案，黄色只用于代码里被问到的行。 */
 :root {
-  --desk: #e8ecf0;
-  --paper: #ffffff;
-  --ink: #18212c;
-  --ink-2: #5b6877;
-  --rule: #d4dbe3;
-  --blue: #2448a3;
-  --blue-wash: #e9eefa;
-  --red: #c42a2a;
-  --red-wash: #fcefee;
-  --mark: #fff1ad;
-  --mark-strong: #ffdf5e;
-  --amber: #8f5300;
-  --amber-wash: #fff3db;
-  --shadow: 0 1px 2px rgb(24 33 44 / .06), 0 10px 30px rgb(24 33 44 / .08);
-  --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
-  --hand: "Kaiti SC", "STKaiti", "KaiTi", "BiauKai", "Noto Serif SC", serif;
-  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --bg: #eceff4; --card: #ffffff; --ink: #17202b; --ink-2: #5a6878; --line: #dce2ea;
+  --accent: #2448a3; --accent-wash: #e8eefb; --red: #c62828; --red-wash: #fdeeee;
+  --amber: #8a5300; --amber-wash: #fff3d9; --ok: #17803d;
+  --shadow: 0 1px 2px rgb(23 32 43 / .05), 0 8px 28px rgb(23 32 43 / .07);
   --bar-h: 60px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --desk: #0e1216; --paper: #171c22; --ink: #e3e8ee; --ink-2: #95a3b3; --rule: #2a323c;
-    --blue: #93afff; --blue-wash: #1c2640; --red: #ff8b80; --red-wash: #3a1f1f;
-    --mark: #3b3519; --mark-strong: #5c4d14; --amber: #f2c46b; --amber-wash: #33280f;
-    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px rgb(0 0 0 / .35);
+    --bg: #0d1117; --card: #151b23; --ink: #e6edf3; --ink-2: #9aa7b6; --line: #28313c;
+    --accent: #8fb0ff; --accent-wash: #1b2740; --red: #ff8f86; --red-wash: #3b2022;
+    --amber: #f0c36d; --amber-wash: #33290f; --ok: #6ee79a;
+    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 8px 28px rgb(0 0 0 / .35);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --desk: #0e1216; --paper: #171c22; --ink: #e3e8ee; --ink-2: #95a3b3; --rule: #2a323c;
-  --blue: #93afff; --blue-wash: #1c2640; --red: #ff8b80; --red-wash: #3a1f1f;
-  --mark: #3b3519; --mark-strong: #5c4d14; --amber: #f2c46b; --amber-wash: #33280f;
-  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px rgb(0 0 0 / .35);
+  --bg: #0d1117; --card: #151b23; --ink: #e6edf3; --ink-2: #9aa7b6; --line: #28313c;
+  --accent: #8fb0ff; --accent-wash: #1b2740; --red: #ff8f86; --red-wash: #3b2022;
+  --amber: #f0c36d; --amber-wash: #33290f; --ok: #6ee79a;
+  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 8px 28px rgb(0 0 0 / .35);
   color-scheme: dark;
 }
-
 * { box-sizing: border-box; }
 html { scroll-padding-top: calc(var(--bar-h) + 16px); }
-body { margin: 0; background: var(--desk); color: var(--ink); font: 15px/1.65 var(--sans); -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.7 var(--sans); -webkit-font-smoothing: antialiased; }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 [hidden] { display: none !important; }
+h1, h2, h3, p { margin: 0; }
+code { font: 500 .88em var(--mono); background: var(--accent-wash); color: var(--ink); padding: 1px 6px; border-radius: 5px; }
 
 /* —— 顶栏 —— */
-.bar { position: sticky; top: 0; z-index: 10; background: var(--paper); border-bottom: 1px solid var(--rule); }
-.bar-in { max-width: 1320px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; }
-.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1 1 200px; color: inherit; text-decoration: none; }
-.brand b { font: 700 18px/1 var(--serif); letter-spacing: .08em; white-space: nowrap; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.bar-in { max-width: 1360px; margin: 0 auto; padding: 10px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
+.brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; flex: 1 1 200px; color: inherit; text-decoration: none; }
+.brand b { font-size: 18px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
 .brand span { color: var(--ink-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .find { position: relative; flex: 1 1 240px; max-width: 360px; }
-.find input { width: 100%; padding: 8px 40px 8px 12px; border: 1px solid var(--rule); border-radius: 6px; background: var(--desk); font-variant-numeric: tabular-nums; }
+.find input { width: 100%; padding: 8px 40px 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-variant-numeric: tabular-nums; }
 .find input::placeholder { color: var(--ink-2); }
-.find input:focus { outline: none; border-color: var(--blue); background: var(--paper); box-shadow: 0 0 0 3px var(--blue-wash); }
-.find kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 12px var(--mono); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 4px; padding: 0 5px; pointer-events: none; }
+.find input:focus { outline: none; border-color: var(--accent); background: var(--card); box-shadow: 0 0 0 3px var(--accent-wash); }
+.find kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 12px var(--mono); color: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; pointer-events: none; }
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
-.pager { display: flex; align-items: center; border: 1px solid var(--rule); border-radius: 6px; }
-.pager button { border: 0; background: none; padding: 5px 10px; font-size: 16px; line-height: 1; color: var(--ink-2); }
-.pager button:hover:not(:disabled) { color: var(--blue); }
+.pager { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.pager button { border: 0; background: none; padding: 5px 11px; font-size: 16px; line-height: 1.2; color: var(--ink-2); }
+.pager button:hover:not(:disabled) { background: var(--accent-wash); color: var(--accent); }
 .pager button:disabled { opacity: .35; cursor: default; }
-.pager span { font: 13px var(--mono); color: var(--ink-2); padding: 0 2px; font-variant-numeric: tabular-nums; }
+.pager span { font: 500 13px var(--mono); color: var(--ink-2); padding: 0 6px; font-variant-numeric: tabular-nums; }
 .switch { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; user-select: none; }
 .switch input { position: absolute; opacity: 0; pointer-events: none; }
-.switch .track { width: 34px; height: 20px; border-radius: 10px; background: var(--rule); position: relative; transition: background .2s; }
-.switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--paper); transition: transform .2s; box-shadow: 0 1px 2px rgb(0 0 0 / .2); }
+.switch .track { width: 36px; height: 21px; border-radius: 11px; background: var(--line); position: relative; transition: background .2s; }
+.switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 15px; height: 15px; border-radius: 50%; background: var(--card); transition: transform .2s; box-shadow: 0 1px 2px rgb(0 0 0 / .25); }
 .switch input:checked + .track { background: var(--red); }
-.switch input:checked + .track::after { transform: translateX(14px); }
-.switch input:focus-visible + .track { outline: 2px solid var(--blue); outline-offset: 2px; }
+.switch input:checked + .track::after { transform: translateX(15px); }
+.switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
 .switch input:disabled ~ * { opacity: .45; cursor: default; }
-.btn { border: 1px solid var(--rule); background: var(--paper); border-radius: 6px; padding: 5px 12px; font-size: 14px; }
-.btn:hover { border-color: var(--blue); color: var(--blue); }
+.btn { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 5px 13px; font-size: 14px; color: var(--ink); text-decoration: none; display: inline-block; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* —— 名单 —— */
-.roster { max-width: 1320px; margin: 0 auto; padding: 36px 16px 64px; }
-.roster-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px 40px; margin-bottom: 24px; }
-.eyebrow { margin: 0 0 6px; font-size: 12px; letter-spacing: .14em; color: var(--ink-2); }
-h1 { margin: 0; font: 700 clamp(24px, 3vw, 34px)/1.3 var(--serif); text-wrap: balance; }
-.tally { display: flex; flex-wrap: wrap; margin: 0; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; }
-.tally div { padding: 8px 18px 9px; border-left: 1px solid var(--rule); }
+.roster { max-width: 1360px; margin: 0 auto; padding: 36px 20px 72px; }
+.roster-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px 40px; }
+.eyebrow { margin-bottom: 6px; font-size: 12px; font-weight: 500; letter-spacing: .12em; color: var(--ink-2); }
+h1 { font-size: clamp(24px, 3vw, 32px); line-height: 1.3; font-weight: 700; text-wrap: balance; }
+.tally { display: flex; flex-wrap: wrap; margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+.tally div { padding: 9px 20px 10px; border-left: 1px solid var(--line); }
 .tally div:first-child { border-left: 0; }
 .tally dt { font-size: 12px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
-.tally dd { margin: 2px 0 0; font: 600 22px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
-.class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 172px), 1fr)); gap: 10px; }
-.stu { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; gap: 1px 10px; min-height: 62px; padding: 10px 12px; text-align: left; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; transition: border-color .15s, transform .15s; }
-.stu:hover { border-color: var(--blue); transform: translateY(-1px); }
-.stu .sid { font: 500 15px var(--mono); letter-spacing: .02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.stu .nm { grid-row: 2; color: var(--ink-2); font-size: 13px; min-height: 1.4em; }
-.stu .dot { grid-row: 1 / span 2; grid-column: 2; }
-.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); flex: none; }
+.tally dd { margin: 2px 0 0; font: 600 22px/1.15 var(--mono); font-variant-numeric: tabular-nums; }
+.progress { display: flex; height: 6px; margin: 22px 0 14px; border-radius: 999px; overflow: hidden; background: var(--line); }
+.progress i { display: block; height: 100%; }
+.progress .p-ready { background: var(--accent); } .progress .p-stale { background: #d69e2e; } .progress .p-empty { background: #94a3b8; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 3px 13px; font-size: 13.5px; }
+.chip b { font: 500 12px var(--mono); color: var(--ink-2); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--card); }
+.chip[aria-pressed="true"] b { color: inherit; opacity: .8; }
+.class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 184px), 1fr)); gap: 10px; }
+.stu { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 10px; min-height: 66px; padding: 11px 14px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 10px; transition: border-color .15s, box-shadow .15s; }
+.stu:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgb(36 72 163 / .12); }
+.stu .sid { font: 500 15px var(--mono); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.stu .nm { grid-row: 2; color: var(--ink-2); font-size: 13px; min-height: 1.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stu .st { grid-row: 1 / span 2; grid-column: 2; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
 .dot.todo { background: none; box-shadow: inset 0 0 0 1.5px var(--ink-2); }
-.dot.empty { background: var(--rule); border-radius: 2px; }
-.dot.stale { background: var(--amber); }
-.stu[data-status="todo"], .stu[data-status="empty"] { background: none; }
+.dot.empty { background: #94a3b8; border-radius: 2px; }
+.dot.stale { background: #d69e2e; }
 .stu[data-status="empty"] .sid { color: var(--ink-2); }
 .none { color: var(--ink-2); padding: 32px 0; }
 
-/* —— 答卷 —— */
-.desk { max-width: 1320px; margin: 0 auto; padding: 28px 16px 64px; display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 1040px) {
-  .desk.two { grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); align-items: start; }
-  .desk.two .code-sheet { position: sticky; top: calc(var(--bar-h) + 20px); max-height: calc(100vh - var(--bar-h) - 40px); overflow: auto; }
+/* —— 答卷与代码 —— */
+.desk { max-width: 1360px; margin: 0 auto; padding: 22px 20px 72px; display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1060px) {
+  .desk.two { grid-template-columns: minmax(0, 1.04fr) minmax(0, 1fr); align-items: start; }
+  .desk.two .code-col { position: sticky; top: calc(var(--bar-h) + 18px); max-height: calc(100vh - var(--bar-h) - 36px); overflow: auto; padding-right: 2px; }
+  .desk.two .cb-body { --cb-max: none; }
 }
-.sheet { background: var(--paper); border-radius: 3px; box-shadow: var(--shadow); padding: clamp(20px, 4vw, 44px); min-width: 0; }
-.paper-head { text-align: center; padding-bottom: 18px; margin-bottom: 26px; border-bottom: 3px double var(--ink); }
-.paper-head h1 { font-size: clamp(22px, 2.4vw, 28px); }
-.fields { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px 28px; margin-top: 18px; font-size: 14px; }
+.paper { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: clamp(22px, 4vw, 44px); min-width: 0; }
+.paper-head { padding-bottom: 20px; margin-bottom: 26px; border-bottom: 1px solid var(--line); }
+.paper-head h1 { font-size: clamp(22px, 2.4vw, 27px); }
+.fields { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 30px; margin-top: 18px; font-size: 14px; }
 .field { display: inline-flex; align-items: center; gap: 10px; }
-.field > span:first-child { color: var(--ink-2); letter-spacing: .3em; }
-.boxes { display: inline-flex; flex-wrap: wrap; padding-left: 1px; }
-.boxes i { width: 1.5em; height: 1.85em; margin-left: -1px; display: grid; place-items: center; font: 500 16px/1 var(--mono); font-style: normal; border: 1px solid var(--ink-2); }
-.name-line { min-width: 6.5em; padding: 0 8px 1px; border-bottom: 1px solid var(--ink); font: 600 17px var(--serif); }
-.score-box { width: 4.6em; height: 2em; border: 1px solid var(--ink-2); }
+.field > span:first-child { color: var(--ink-2); font-size: 13px; }
+.boxes { display: inline-flex; }
+.boxes i { width: 1.65em; height: 2em; display: grid; place-items: center; font: 500 15px/1 var(--mono); font-style: normal; border: 1px solid var(--ink-2); margin-left: -1px; }
+.boxes i:first-child { margin-left: 0; border-radius: 6px 0 0 6px; } .boxes i:last-child { border-radius: 0 6px 6px 0; }
+.name-line { min-width: 6em; padding: 0 8px 2px; border-bottom: 1.5px solid var(--ink); font-weight: 700; font-size: 16px; }
+.name-sub { color: var(--ink-2); font-size: 12.5px; }
+.score-box { width: 4.4em; height: 2.1em; border: 1px solid var(--ink-2); border-radius: 6px; }
 
-.notice { margin: 0 0 22px; padding: 12px 14px; border-radius: 6px; background: var(--amber-wash); color: var(--amber); font-size: 14px; }
+.notice { margin: 0 0 22px; padding: 14px 16px; border-radius: 10px; background: var(--amber-wash); color: var(--amber); font-size: 14px; }
 .notice b { display: block; font-size: 15px; margin-bottom: 2px; }
-.notice.calm { background: var(--blue-wash); color: var(--ink); }
-.say { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; padding: 4px 4px 4px 10px; background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; font: 14px var(--mono); }
-.say button { border: 0; background: var(--blue); color: var(--paper); border-radius: 4px; padding: 2px 10px; font: 13px var(--sans); }
+.notice.calm { background: var(--accent-wash); color: var(--ink); }
+.say { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; padding: 4px 4px 4px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; font: 14px var(--mono); }
+.say button { border: 0; background: var(--accent); color: var(--card); border-radius: 6px; padding: 3px 12px; font: 500 13px var(--sans); }
 
 .key { display: none; }
 body.show-key .key { display: block; }
 body.show-key span.key { display: inline; }
-.ta-note { margin: 0 0 24px; color: var(--red); font: 16px/1.7 var(--hand); }
-.ta-note::before, .answer::before { content: attr(data-label); display: inline-block; margin-right: 8px; padding: 0 5px; border: 1.5px solid currentColor; border-radius: 3px; font: 600 11px/1.6 var(--sans); letter-spacing: .1em; vertical-align: 2px; }
+.ta-note, .answer { color: var(--red); font-size: 15px; line-height: 1.75; }
+.ta-note { margin: 0 0 26px; padding: 12px 16px; background: var(--red-wash); border-radius: 10px; }
+.ta-note::before, .answer::before { content: attr(data-label); display: inline-block; margin-right: 10px; padding: 0 7px; border: 1.5px solid currentColor; border-radius: 4px; font: 700 11px/1.7 var(--sans); letter-spacing: .1em; vertical-align: 1px; }
+.ta-note code, .answer code { background: var(--card); }
 
-ol.qs { list-style: none; margin: 0; padding: 0; display: grid; gap: 30px; }
-.q { display: grid; grid-template-columns: 2.1em minmax(0, 1fr); font: 16.5px/1.85 var(--serif); border-radius: 4px; transition: background-color .6s; }
-.q.flash { background: var(--mark); }
-.qn { font-weight: 700; font-variant-numeric: tabular-nums; }
-.stem { margin: 0; }
-.kind { color: var(--ink-2); font-size: .9em; }
-.slot { white-space: nowrap; }
-.slot .fill { display: inline-block; min-width: 2.6em; text-align: center; }
-body.show-key .slot .fill { color: var(--red); font: 700 1.05em var(--hand); }
-.q code, .ta-note code, .answer code { font: .86em var(--mono); background: var(--blue-wash); padding: 1px 5px; border-radius: 3px; }
-ol.opts { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px 24px; grid-template-columns: minmax(0, 1fr); }
+ol.qs { list-style: none; margin: 0; padding: 0; display: grid; gap: 34px; }
+.q { display: grid; grid-template-columns: 2.4em minmax(0, 1fr); gap: 0 4px; border-radius: 10px; transition: background-color .6s; }
+.q.flash { background: var(--accent-wash); box-shadow: 0 0 0 8px var(--accent-wash); }
+.qn { width: 1.9em; height: 1.9em; display: grid; place-items: center; border-radius: 8px; background: var(--ink); color: var(--card); font: 700 14px/1 var(--mono); margin-top: 2px; }
 .qbody { min-width: 0; container-type: inline-size; }
+.stem { font-size: 16.5px; line-height: 1.85; }
+.kind { display: inline-block; margin-right: 8px; padding: 0 8px; border-radius: 5px; background: var(--accent-wash); color: var(--accent); font-size: 12.5px; font-weight: 700; letter-spacing: .04em; vertical-align: 1px; }
+.slot { white-space: nowrap; margin-left: 4px; }
+.slot .fill { display: inline-block; min-width: 2.6em; text-align: center; }
+body.show-key .slot .fill { color: var(--red); font-weight: 700; }
+ol.opts { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px 22px; grid-template-columns: minmax(0, 1fr); }
 ol.opts.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 ol.opts.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @container (max-width: 30em) { ol.opts.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container (max-width: 22em) { ol.opts.cols-4, ol.opts.cols-2 { grid-template-columns: minmax(0, 1fr); } }
-.opts li { display: grid; grid-template-columns: 1.9em minmax(0, 1fr); }
-.letter { position: relative; justify-self: start; width: 1.3em; text-align: center; }
-body.show-key .opts li.correct .letter { color: var(--red); font-weight: 700; }
-body.show-key .opts li.correct .letter::after { content: ""; position: absolute; left: 50%; top: 50%; width: 1.7em; height: 1.5em; border: 2px solid var(--red); border-radius: 50%; transform: translate(-50%, -50%) rotate(-10deg); }
-.write { height: 5.55em; margin-top: 6px; background: repeating-linear-gradient(to bottom, transparent 0 calc(1.85em - 1px), var(--rule) calc(1.85em - 1px) 1.85em); }
-.refs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.ref { border: 0; background: var(--blue-wash); color: var(--blue); border-radius: 4px; padding: 0 7px; font: 12px/1.75 var(--mono); }
-.ref:hover { background: var(--blue); color: var(--paper); }
-.answer { margin: 10px 0 0; color: var(--red); font: 15.5px/1.75 var(--hand); }
+.opts li { display: grid; grid-template-columns: 2em minmax(0, 1fr); align-items: baseline; padding: 3px 6px; border-radius: 8px; }
+.letter { justify-self: start; width: 1.55em; height: 1.55em; display: grid; place-items: center; border: 1.5px solid var(--line); border-radius: 50%; font: 600 12.5px/1 var(--mono); color: var(--ink-2); transform: translateY(.18em); }
+body.show-key .opts li.correct { background: var(--red-wash); }
+body.show-key .opts li.correct .letter { border-color: var(--red); background: var(--red); color: var(--card); }
+.write { height: 5.6em; margin-top: 8px; background: repeating-linear-gradient(to bottom, transparent 0 calc(1.85em - 1px), var(--line) calc(1.85em - 1px) 1.85em); }
+.refs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.ref { border: 1px solid var(--line); background: none; color: var(--ink-2); border-radius: 6px; padding: 0 9px; font: 500 12px/1.9 var(--mono); }
+.ref:hover { border-color: var(--accent); background: var(--accent-wash); color: var(--accent); }
+.answer { margin-top: 12px; }
 
-.code-sheet { padding: clamp(18px, 3vw, 32px); }
-.code-head { margin-bottom: 18px; }
-.code-head h2 { margin: 0; font: 600 16px var(--serif); }
-.code-head p { margin: 4px 0 0; color: var(--ink-2); font-size: 13px; }
+.code-col { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.code-head h2 { font-size: 16px; font-weight: 700; }
+.code-head p { margin-top: 3px; color: var(--ink-2); font-size: 13px; }
+.notes { margin-top: 6px; font-size: 13px; color: var(--ink-2); }
+.notes summary { cursor: pointer; width: max-content; }
+.notes summary:hover { color: var(--accent); }
 .code-head ul { margin: 8px 0 0; padding-left: 1.2em; color: var(--ink-2); font-size: 13px; }
-.file { margin-top: 22px; }
-.file:first-of-type { margin-top: 0; }
-.file-name { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 6px; font: 600 13px var(--mono); }
-.file-name span { color: var(--ink-2); font-weight: 400; }
-.listing { overflow-x: auto; border-block: 1px solid var(--rule); font: 13px/1.65 var(--mono); }
-.listing-in { display: block; width: max-content; min-width: 100%; padding-block: 4px; }
-.row { display: flex; white-space: pre; transition: background-color .5s; }
-.row.hit { background: var(--mark); }
-.row.focus { background: var(--mark-strong); }
-.gut { flex: 0 0 3.4em; display: flex; justify-content: flex-end; gap: 1px; padding-right: 4px; }
-.gut button { border: 0; background: none; padding: 0; color: var(--blue); font: 600 13px/1.65 var(--sans); }
-.ln { flex: 0 0 2.8em; padding-right: 1em; text-align: right; color: var(--ink-2); opacity: .7; user-select: none; font-variant-numeric: tabular-nums; }
-.src { padding-right: 16px; }
+@media (max-width: 1059px) { .code-col .cb-body { --cb-max: 70vh; } }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
-}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 @media print {
   @page { margin: 16mm; }
   body { background: #fff; color: #000; }
   .bar, .notice { display: none !important; }
   .desk { display: block; padding: 0; max-width: none; }
-  .sheet { box-shadow: none; padding: 0; }
-  .desk.two .code-sheet { position: static; max-height: none; overflow: visible; break-before: page; }
-  .listing { overflow: visible; }
-  .listing-in { width: auto; }
-  .row { white-space: pre-wrap; }
+  .paper { box-shadow: none; padding: 0; }
+  .desk.two .code-col { position: static; max-height: none; overflow: visible; break-before: page; padding-top: 12px; }
   .q { break-inside: avoid; }
-  .gut button { color: inherit; }
 }
 </style>
 </head>
@@ -216,6 +197,7 @@ body.show-key .opts li.correct .letter::after { content: ""; position: absolute;
         <button type="button" id="next" aria-label="下一位">›</button>
       </div>
       <label class="switch"><input type="checkbox" id="show-key"><span class="track"></span><span>显示答案</span></label>
+      <a class="btn" id="to-review" href="review.html" hidden>线索排查</a>
       <button type="button" class="btn" id="print">打印</button>
     </div>
   </div>
@@ -223,6 +205,7 @@ body.show-key .opts li.correct .letter::after { content: ""; position: absolute;
 <main id="view"></main>
 <script id="data" type="application/json">__DATA__</script>
 <script>
+//__SHARED_JS__
 const D = JSON.parse(document.getElementById("data").textContent);
 const $ = id => document.getElementById(id);
 const view = $("view"), input = $("q"), keyBox = $("show-key");
@@ -230,19 +213,8 @@ const ids = Object.keys(D.students);
 const TITLE = D.assignment || D.archive.replace(/\.zip$/i, "");
 const KIND = { single: "单选", multi: "多选", text: "简答" };
 const STATUS = { ready: "已出题", stale: "需更新", todo: "待出题", empty: "无代码" };
-const CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩";
+let filter = "all";
 
-function el(tag, attrs, ...kids) {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (v === null || v === undefined || v === false) continue;
-    if (k === "class") e.className = v;
-    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
-    else e.setAttribute(k, v === true ? "" : v);
-  }
-  for (const kid of kids.flat(Infinity)) if (kid !== null && kid !== undefined && kid !== false) e.append(kid);
-  return e;
-}
 // 题面里的 `代码` 用等宽字体；一律作为文本插入，学生代码里的任何 HTML 都不会被解析
 function rich(text) {
   return String(text ?? "").split(/`([^`\n]+)`/).map((part, i) => i % 2 ? el("code", {}, part) : part);
@@ -256,11 +228,9 @@ function expand(ref) {                        // "main.c:7-9" → main.c:7, main
   return Array.from({ length: (b || a) - a + 1 }, (_, k) => `${file}:${a + k}`);
 }
 function rows(refs) {
-  return refs.flatMap(expand).map(r => document.querySelector(`.row[data-ref="${CSS.escape(r)}"]`)).filter(Boolean);
+  return refs.flatMap(expand).map(r => document.querySelector(`.cb-row[data-ref="${CSS.escape(r)}"]`)).filter(Boolean);
 }
-function pulse(nodes, cls) {
-  nodes.forEach(n => { n.classList.add(cls); setTimeout(() => n.classList.remove(cls), 1100); });
-}
+function pulse(nodes, cls) { nodes.forEach(n => { n.classList.add(cls); setTimeout(() => n.classList.remove(cls), 1100); }); }
 function jumpToCode(ref) {
   const hit = rows([ref]);
   if (!hit.length) return;
@@ -275,28 +245,30 @@ function jumpToQuestion(n) {
 }
 
 /* —— 名单 —— */
-function showRoster(filter = "") {
+function showRoster(text = "") {
   document.title = `${TITLE} · 抽查题`;
   $("tools").hidden = true;
   const count = st => ids.filter(id => status(id) === st).length;
-  const f = filter.trim().toLowerCase();
-  const shown = f ? ids.filter(id => id.includes(f) || (D.students[id].name || "").toLowerCase().includes(f)) : ids;
-  const tally = [["学生", ids.length, null], ["已出题", count("ready"), "ready"], ["待出题", count("todo"), "todo"],
-    ["无代码", count("empty"), "empty"], ["需更新", count("stale"), "stale"]]
-    .filter(([, n, st]) => n || !st || st === "ready" || st === "todo");
-  view.replaceChildren(el("section", { class: "roster" },
+  const f = text.trim().toLowerCase();
+  const shown = ids.filter(id => (filter === "all" || status(id) === filter)
+    && (!f || id.includes(f) || (D.students[id].name || "").toLowerCase().includes(f)));
+  const stats = [["ready", "已出题"], ["stale", "需更新"], ["todo", "待出题"], ["empty", "无代码"]].filter(([k]) => count(k) || k === "ready" || k === "todo");
+  const chip = (key, label, n) => el("button", { class: "chip", type: "button", "aria-pressed": String(filter === key), onclick: () => { filter = key; showRoster(input.value); } }, label, el("b", {}, String(n)));
+  put(view, el("section", { class: "roster" },
     el("div", { class: "roster-head" },
       el("div", {}, el("p", { class: "eyebrow" }, `课堂抽查 · ${D.archive}`), el("h1", {}, TITLE)),
-      el("dl", { class: "tally" }, tally.map(([label, n, st]) =>
-        el("div", {}, el("dt", {}, st ? el("span", { class: `dot ${st}` }) : null, label), el("dd", {}, String(n)))))),
+      el("dl", { class: "tally" }, el("div", {}, el("dt", {}, "学生"), el("dd", {}, String(ids.length))),
+        stats.map(([k, label]) => el("div", {}, el("dt", {}, el("span", { class: `dot ${k}` }), label), el("dd", {}, String(count(k))))))),
+    el("div", { class: "progress", role: "img", "aria-label": "出题进度" }, ["ready", "stale", "empty"].map(k => el("i", { class: "p-" + k, style: `width:${count(k) / ids.length * 100}%` }))),
+    el("div", { class: "chips" }, chip("all", "全部", ids.length), stats.map(([k, label]) => chip(k, label, count(k)))),
     shown.length
       ? el("div", { class: "class-grid" }, shown.map(id => {
           const st = status(id), s = D.students[id];
-          return el("button", { class: "stu", type: "button", "data-status": st, title: STATUS[st], onclick: () => open(id) },
-            el("span", { class: "sid" }, id), el("span", { class: "nm" }, s.name || ""),
-            el("span", { class: `dot ${st}`, "aria-label": STATUS[st] }));
+          return el("button", { class: "stu", type: "button", "data-status": st, onclick: () => open(id) },
+            el("span", { class: "sid" }, id), el("span", { class: "nm", title: s.name || "" }, parseName(s.name).short),
+            el("span", { class: "st" }, el("span", { class: `dot ${st}` }), STATUS[st]));
         }))
-      : el("p", { class: "none" }, `名单里没有「${filter.trim()}」。检查学号是否输错，或换成姓名试试。`)));
+      : el("p", { class: "none" }, `名单里没有「${text.trim()}」。检查学号是否输错，或换成姓名试试。`)));
 }
 
 /* —— 答卷 —— */
@@ -306,32 +278,28 @@ function paperHead(id, s, n) {
     el("h1", {}, TITLE),
     el("div", { class: "fields" },
       el("div", { class: "field" }, el("span", {}, "学号"), el("span", { class: "boxes", "aria-label": id }, [...id].map(d => el("i", {}, d)))),
-      el("div", { class: "field" }, el("span", {}, "姓名"), el("span", { class: "name-line" }, s.name || " ")),
+      el("div", { class: "field" }, el("span", {}, "姓名"), el("span", { class: "name-line" }, parseName(s.name).short || " "),
+        (n => n.en || n.dept ? el("span", { class: "name-sub" }, [n.zh && n.en, n.dept].filter(Boolean).join(" · ")) : null)(parseName(s.name))),
       el("div", { class: "field" }, el("span", {}, "得分"), el("span", { class: "score-box" }))));
 }
 function sayThis(text) {
   const code = el("span", {}, text);
-  const btn = el("button", { type: "button", onclick: async () => {
-    try { await navigator.clipboard.writeText(text); btn.textContent = "已复制"; }
-    catch { getSelection().selectAllChildren(code); btn.textContent = "已选中"; }
-    setTimeout(() => (btn.textContent = "复制"), 1500);
-  } }, "复制");
-  return el("span", { class: "say" }, code, btn);
+  return el("span", { class: "say" }, code, el("button", { type: "button", onclick: e => copyText(text, e.currentTarget) }, "复制"));
 }
 function question(q, n) {
   const choice = q.type !== "text";
   const correct = new Set(choice ? q.answer.split(",") : []);
   const longest = choice ? Math.max(...q.choices.map(c => [...c].length)) : 0;
   const li = el("li", { class: "q", id: "q" + n },
-    el("span", { class: "qn" }, n + "."),
+    el("span", { class: "qn" }, String(n)),
     el("div", { class: "qbody" },
-      el("p", { class: "stem" }, el("span", { class: "kind" }, `【${KIND[q.type] || q.type}】`), rich(q.question),
+      el("p", { class: "stem" }, el("span", { class: "kind" }, KIND[q.type] || q.type), rich(q.question),
         choice ? el("span", { class: "slot" }, "（", el("span", { class: "fill" }, el("span", { class: "key" }, q.answer.replaceAll(",", ""))), "）") : null),
       choice
         ? el("ol", { class: "opts" + (longest <= 7 ? " cols-4" : longest <= 16 ? " cols-2" : "") },
             q.choices.map((c, i) => {
               const letter = String.fromCharCode(65 + i);
-              return el("li", { class: correct.has(letter) ? "correct" : null }, el("span", { class: "letter" }, letter + "."), el("span", {}, rich(c)));
+              return el("li", { class: correct.has(letter) ? "correct" : null }, el("span", { class: "letter" }, letter), el("span", {}, rich(c)));
             }))
         : el("div", { class: "write", "aria-hidden": "true" }),
       q.lines?.length ? el("div", { class: "refs" }, q.lines.map(r =>
@@ -342,41 +310,35 @@ function question(q, n) {
   li.addEventListener("mouseleave", () => rows(q.lines || []).forEach(r => r.classList.remove("focus")));
   return li;
 }
-function codeSheet(s, p) {
-  const marks = {};
+function codeColumn(s, p) {
+  const marks = {}, hits = {};
   (p ? p.questions : []).forEach((q, i) => (q.lines || []).flatMap(expand).forEach(r => {
-    (marks[r] ||= []).includes(i + 1) || marks[r].push(i + 1);
+    const at = r.lastIndexOf(":"), file = r.slice(0, at), n = Number(r.slice(at + 1));
+    (hits[file] ||= new Set()).add(n);
+    const list = (marks[file] ||= {})[n] ||= [];
+    if (!list.some(m => m.text === String(i + 1))) list.push({ text: String(i + 1), title: `第 ${i + 1} 题`, onclick: () => jumpToQuestion(i + 1) });
   }));
-  return el("aside", { class: "sheet code-sheet", "aria-label": "学生代码" },
+  return el("aside", { class: "code-col", "aria-label": "学生代码" },
     el("div", { class: "code-head" },
-      el("h2", {}, "附：学生代码"),
+      el("h2", {}, "学生代码"),
       el("p", {}, [`${s.files.length} 个文件`, s.submitted && `提交于 ${s.submitted}`].filter(Boolean).join(" · ")),
-      s.notes.length ? el("ul", {}, s.notes.map(n => el("li", {}, n))) : null),
-    s.files.map(f => {
-      const lines = f.code.replace(/\n$/, "").split("\n");
-      return el("section", { class: "file" },
-        el("p", { class: "file-name" }, f.name, el("span", {}, `${lines.length} 行`)),
-        el("div", { class: "listing" }, el("div", { class: "listing-in" }, lines.map((line, i) => {
-          const ref = `${f.name}:${i + 1}`, qs = marks[ref] || [];
-          return el("div", { class: "row" + (qs.length ? " hit" : ""), "data-ref": ref },
-            el("span", { class: "gut" }, qs.map(n => el("button", { type: "button", title: `第 ${n} 题`, onclick: () => jumpToQuestion(n) }, CIRCLED[n - 1] || n))),
-            el("span", { class: "ln" }, String(i + 1)),
-            el("span", { class: "src" }, line || " "));
-        }))));
-    }));
+      s.notes.length ? el("details", { class: "notes" }, el("summary", {}, `导入说明（${s.notes.length} 条）`), el("ul", {}, s.notes.map(n => el("li", {}, n)))) : null),
+    s.files.map(f => codeBlock({ name: f.name, code: f.code, hits: hits[f.name] || new Set(), marks: marks[f.name] || {} })));
 }
 function showStudent(id) {
   const s = D.students[id], p = D.papers[id], st = status(id), at = ids.indexOf(id);
-  document.title = `${id}${s.name ? " " + s.name : ""} · 抽查题`;
+  document.title = `${id} ${parseName(s.name).short} · 抽查题`.replace("  ", " ");
   $("tools").hidden = false;
   $("pos").textContent = `${at + 1} / ${ids.length}`;
   $("prev").disabled = at === 0;
   $("next").disabled = at === ids.length - 1;
   keyBox.disabled = !p;
-  const sheet = el("article", { class: "sheet" }, paperHead(id, s, p && p.questions.length));
+  $("to-review").hidden = !D.has_review;
+  $("to-review").href = "review.html#" + id;
+  const sheet = el("article", { class: "paper" }, paperHead(id, s, p && p.questions.length));
   if (st === "empty") {
     sheet.append(el("div", { class: "notice" }, el("b", {}, "这份提交里没有可读的代码或文字"),
-      "附件可能只有截图、可执行文件或空文件。请到 Blackboard 核对原始提交。"));
+      "附件可能只有截图、可执行文件、压缩包（.7z / .rar）或 PDF。请到 Blackboard 核对原始提交。"));
   } else if (!p) {
     sheet.append(el("div", { class: "notice calm" }, el("b", {}, "还没给这位同学出题"),
       "在对话里对 Claude 说下面这句，出完后刷新本页：", el("br"), sayThis(`给 ${id} 出题`)));
@@ -386,7 +348,7 @@ function showStudent(id) {
     if (p.summary) sheet.append(el("p", { class: "ta-note key", "data-label": "TA 备注" }, rich(p.summary)));
     sheet.append(el("ol", { class: "qs" }, p.questions.map((q, i) => question(q, i + 1))));
   }
-  view.replaceChildren(el("div", { class: "desk" + (s.files.length ? " two" : "") }, sheet, s.files.length ? codeSheet(s, p) : null));
+  put(view, el("div", { class: "desk" + (s.files.length ? " two" : "") }, sheet, s.files.length ? codeColumn(s, p) : null));
   scrollTo(0, 0);
 }
 
@@ -411,7 +373,7 @@ input.addEventListener("input", () => {
   if (location.hash.length > 1) location.hash = "";
   else showRoster(input.value);
 });
-$("home").addEventListener("click", () => { input.value = ""; showRoster(); });
+$("home").addEventListener("click", () => { input.value = ""; filter = "all"; showRoster(); });
 $("prev").addEventListener("click", () => open(ids[ids.indexOf(decodeURIComponent(location.hash.slice(1))) - 1]));
 $("next").addEventListener("click", () => open(ids[ids.indexOf(decodeURIComponent(location.hash.slice(1))) + 1]));
 $("print").addEventListener("click", () => print());
@@ -422,10 +384,7 @@ keyBox.addEventListener("change", () => {
   try { localStorage.setItem("ta-quiz-show-key", keyBox.checked ? "1" : "0"); } catch {}
 });
 addEventListener("keydown", e => {
-  if (e.target === input) {
-    if (e.key === "Escape") input.blur();
-    return;
-  }
+  if (e.target === input) { if (e.key === "Escape") input.blur(); return; }
   const onStudent = !$("tools").hidden;
   if (e.key === "/") { e.preventDefault(); input.focus(); input.select(); }
   else if (onStudent && e.key === "ArrowLeft" && !$("prev").disabled) $("prev").click();

@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 线索排查</title>
+<style>
+/*__FONTS__*/
+/*__SHARED_CSS__*/
+/* 布局：左边按优先级排的名单，右边是一位学生的「案卷」；证据是真实的代码行。
+   色彩与抽查卷同源：红色只给「自述」这类最硬的线索，琥珀色是雷同，蓝色是超纲，青色是前后不一致。 */
+:root {
+  --bg: #eceff4; --card: #ffffff; --ink: #17202b; --ink-2: #5a6878; --line: #dce2ea;
+  --accent: #2448a3; --accent-wash: #e8eefb;
+  --red: #c62828; --red-wash: #fdeeee;
+  --amber: #8a5300; --amber-wash: #fff3d9;
+  --teal: #0b6b66; --teal-wash: #e1f2f0;
+  --shadow: 0 1px 2px rgb(23 32 43 / .05), 0 8px 28px rgb(23 32 43 / .07);
+  --bar-h: 58px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1117; --card: #151b23; --ink: #e6edf3; --ink-2: #9aa7b6; --line: #28313c;
+    --accent: #8fb0ff; --accent-wash: #1b2740; --red: #ff8f86; --red-wash: #3b2022;
+    --amber: #f0c36d; --amber-wash: #33290f; --teal: #6fd3cd; --teal-wash: #143231;
+    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 8px 28px rgb(0 0 0 / .35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1117; --card: #151b23; --ink: #e6edf3; --ink-2: #9aa7b6; --line: #28313c;
+  --accent: #8fb0ff; --accent-wash: #1b2740; --red: #ff8f86; --red-wash: #3b2022;
+  --amber: #f0c36d; --amber-wash: #33290f; --teal: #6fd3cd; --teal-wash: #143231;
+  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 8px 28px rgb(0 0 0 / .35);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: calc(var(--bar-h) + 12px); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.7 var(--sans); -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+h1, h2, h3, p { margin: 0; }
+a { color: var(--accent); }
+.ic { font: 500 .88em var(--mono); background: var(--accent-wash); padding: 1px 6px; border-radius: 5px; }
+
+/* —— 顶栏 —— */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.bar-in { max-width: 1400px; margin: 0 auto; padding: 9px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+.brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.brand b { font-size: 18px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
+.brand span { color: var(--ink-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--bg); border-radius: 10px; flex: 1 1 auto; }
+.tab { border: 0; background: none; padding: 5px 13px; border-radius: 8px; font-size: 14px; color: var(--ink-2); white-space: nowrap; }
+.tab b { font: 500 12px var(--mono); margin-left: 7px; padding: 0 6px; border-radius: 5px; background: var(--line); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .14); font-weight: 700; }
+.tab[aria-selected="true"] b { background: var(--ink); color: var(--card); }
+.find { position: relative; flex: 0 1 230px; min-width: 150px; }
+.find input { width: 100%; padding: 7px 36px 7px 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-variant-numeric: tabular-nums; }
+.find input::placeholder { color: var(--ink-2); }
+.find input:focus { outline: none; border-color: var(--accent); background: var(--card); box-shadow: 0 0 0 3px var(--accent-wash); }
+.find kbd { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font: 12px var(--mono); color: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; pointer-events: none; }
+
+/* —— 版面 —— */
+.shell { max-width: 1400px; margin: 0 auto; padding: 18px 20px 56px; display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 980px) {
+  .shell { grid-template-columns: 390px minmax(0, 1fr); align-items: start; }
+  .list { position: sticky; top: calc(var(--bar-h) + 18px); max-height: calc(100vh - var(--bar-h) - 36px); overflow: auto; }
+}
+@media (max-width: 979px) { .shell.has-sel .list { display: none; } .shell:not(.has-sel) .case { display: none; } }
+.list { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); min-width: 0; }
+.kinds { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--card); z-index: 1; }
+.kinds .lbl { width: 100%; font-size: 12px; font-weight: 500; color: var(--ink-2); letter-spacing: .08em; }
+.k { display: inline-flex; align-items: center; gap: 6px; padding: 1px 10px; border: 1px solid var(--line); border-radius: 999px; background: none; font-size: 13px; line-height: 1.75; }
+.k i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.k b { font: 500 11.5px var(--mono); color: var(--ink-2); }
+.k[aria-pressed="true"] { background: var(--cw); border-color: var(--c); color: var(--ink); }
+.k-disclosed { --c: var(--red); --cw: var(--red-wash); } .k-similar { --c: var(--amber); --cw: var(--amber-wash); }
+.k-rule { --c: var(--accent); --cw: var(--accent-wash); } .k-mismatch { --c: var(--teal); --cw: var(--teal-wash); }
+.k-style { --c: var(--ink-2); --cw: var(--bg); }
+.group { margin: 0; padding: 12px 16px 6px; font-size: 12px; font-weight: 500; letter-spacing: .1em; color: var(--ink-2); display: flex; justify-content: space-between; }
+.rows { list-style: none; margin: 0; padding: 0; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; width: 100%; padding: 11px 16px; text-align: left; border: 0; border-top: 1px solid var(--line); background: none; }
+.row:hover { background: var(--bg); }
+.row[aria-current="true"] { background: var(--accent-wash); }
+.row .who { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+.sid { font: 500 14.5px var(--mono); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.nm { color: var(--ink-2); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .sum { grid-column: 1 / -1; margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.row .dots { display: flex; gap: 4px; align-items: center; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.dot.k-disclosed { background: var(--red); } .dot.k-similar { background: var(--amber); } .dot.k-rule { background: var(--accent); }
+.dot.k-mismatch { background: var(--teal); } .dot.k-style { background: var(--ink-2); }
+.pill { display: inline-block; padding: 0 9px; border-radius: 6px; font-size: 12px; line-height: 1.8; white-space: nowrap; font-weight: 500; }
+.pill-verify { background: var(--red); color: var(--card); font-weight: 700; }
+.pill-follow_up { background: var(--amber-wash); color: var(--amber); border: 1px solid var(--amber); }
+.pill-normal { color: var(--ink-2); border: 1px solid var(--line); }
+.none { padding: 28px 16px; color: var(--ink-2); }
+
+/* —— 案卷 —— */
+.case { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: clamp(20px, 3vw, 38px); min-width: 0; }
+.back { display: none; margin-bottom: 14px; border: 1px solid var(--line); background: none; border-radius: 8px; padding: 5px 13px; }
+@media (max-width: 979px) { .back { display: inline-block; } }
+.case-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.eyebrow { margin-bottom: 4px; font-size: 12px; font-weight: 500; letter-spacing: .12em; color: var(--ink-2); }
+.case-head h2 { font-size: clamp(22px, 2.6vw, 28px); line-height: 1.3; font-weight: 700; }
+.case-head h2 .sidn { font: 500 .92em var(--mono); letter-spacing: .01em; margin-right: 10px; }
+.case-head .sub { margin-top: 2px; color: var(--ink-2); font-size: 13.5px; }
+.case-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 5px 13px; font-size: 14px; text-decoration: none; color: var(--ink); display: inline-block; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn:disabled { opacity: .35; cursor: default; border-color: var(--line); color: inherit; }
+.verdict { margin: 20px 0 0; display: flex; gap: 12px; align-items: baseline; font-size: 17px; line-height: 1.8; font-weight: 500; }
+.verdict .pill { flex: none; font-size: 13px; }
+.signals { display: grid; gap: 30px; margin: 26px 0 0; }
+.signal { display: grid; gap: 12px; min-width: 0; padding-top: 22px; border-top: 1px solid var(--line); }
+.signal:first-child { border-top: 0; padding-top: 0; }
+.sig-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.kchip { display: inline-flex; align-items: center; gap: 7px; padding: 0 11px; border-radius: 6px; font-size: 13px; line-height: 1.85; font-weight: 700; background: var(--cw); color: var(--ink); border: 1px solid var(--c); }
+.kchip i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.loc { font: 500 12.5px var(--mono); color: var(--ink-2); }
+.obs { font-size: 15.5px; line-height: 1.85; }
+.obs a { font-family: var(--mono); font-size: .93em; text-underline-offset: 2px; }
+.ask { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 14px; align-items: start; padding: 12px 16px; background: var(--accent-wash); border-radius: 10px; }
+.ask-l { font-size: 12px; letter-spacing: .12em; color: var(--accent); font-weight: 700; padding-top: 3px; white-space: nowrap; }
+.ask p { font-size: 15.5px; line-height: 1.75; }
+.ask .ic { background: var(--card); }
+.copy { border: 0; background: none; color: var(--accent); font-size: 13px; padding: 2px 4px; white-space: nowrap; }
+.copy:hover { text-decoration: underline; }
+.fams { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 14px; }
+.fams h3 { font-size: 12.5px; font-weight: 500; letter-spacing: .1em; color: var(--ink-2); margin-bottom: 8px; }
+.fam-links { display: flex; flex-wrap: wrap; gap: 6px; }
+details.code { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); }
+details.code > summary { cursor: pointer; color: var(--accent); font-size: 14px; width: max-content; }
+details.code .cb { margin-top: 12px; }
+details.code .cb-body { --cb-max: 420px; }
+.caveat { margin: 30px 0 0; padding: 12px 16px; border-radius: 10px; background: var(--amber-wash); color: var(--amber); font-size: 13.5px; line-height: 1.75; }
+
+/* —— 说明页（未选学生时）—— */
+.intro h2 { font-size: clamp(22px, 2.6vw, 28px); line-height: 1.35; font-weight: 700; }
+.intro .lead { margin: 12px 0 0; max-width: 60ch; font-size: 16.5px; line-height: 1.85; }
+.legend { display: grid; gap: 14px; margin: 24px 0 0; padding: 0; list-style: none; }
+.legend li { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 4px 14px; align-items: baseline; }
+.tally { display: flex; flex-wrap: wrap; margin: 26px 0 0; background: var(--bg); border-radius: 10px; }
+.tally div { padding: 9px 20px 10px; border-left: 1px solid var(--line); }
+.tally div:first-child { border-left: 0; }
+.tally dt { font-size: 12px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tally dd { margin: 2px 0 0; font: 600 22px/1.15 var(--mono); font-variant-numeric: tabular-nums; }
+.empty-note { margin: 22px 0 0; color: var(--ink-2); font-size: 14px; }
+
+/* —— 写法家族 —— */
+.fam-view { grid-column: 1 / -1; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 480px), 1fr)); align-items: start; }
+.fam { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 22px 24px; display: grid; gap: 14px; min-width: 0; }
+.fam h3 { font-size: 17px; line-height: 1.45; font-weight: 700; }
+.fam-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.str { flex: none; font-size: 12px; line-height: 1.85; padding: 0 9px; border-radius: 6px; border: 1px solid var(--line); color: var(--ink-2); font-weight: 500; }
+.str-strong { background: var(--red); border-color: var(--red); color: var(--card); font-weight: 700; }
+.str-medium { background: var(--amber-wash); border-color: var(--amber); color: var(--amber); }
+.fam p { font-size: 14.5px; line-height: 1.8; }
+.members { display: flex; flex-wrap: wrap; gap: 6px; }
+.member { display: inline-flex; gap: 7px; align-items: baseline; padding: 1px 10px; border: 1px solid var(--line); border-radius: 6px; background: none; font-size: 13px; }
+.member .sid { font-size: 13px; }
+.member:hover { border-color: var(--accent); background: var(--accent-wash); }
+.example { font-size: 12px; color: var(--ink-2); }
+details.pairs { grid-column: 1 / -1; background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 16px 24px; }
+details.pairs summary { cursor: pointer; font-size: 14px; }
+.pair { padding: 12px 0; border-top: 1px solid var(--line); font-size: 13.5px; margin-top: 12px; }
+.pair code { font: 500 12.5px var(--mono); }
+.foot { max-width: 1400px; margin: 0 auto; padding: 0 20px 40px; color: var(--ink-2); font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<header class="bar" id="bar">
+  <div class="bar-in">
+    <div class="brand"><b>线索排查</b><span id="bar-title"></span></div>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="find"><input id="q" type="search" placeholder="学号或姓名" aria-label="学号或姓名" autocomplete="off"><kbd>/</kbd></div>
+  </div>
+</header>
+<main class="shell" id="shell">
+  <aside class="list" id="list" aria-label="学生名单"></aside>
+  <article class="case" id="case"></article>
+  <div class="fam-view" id="fam-view" hidden></div>
+</main>
+<p class="foot" id="foot"></p>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+//__SHARED_JS__
+const D = JSON.parse(document.getElementById("data").textContent);
+const S = D.students, R = D.reviews, FAM = D.families || [], PAIRS = D.similar || [];
+const $ = id => document.getElementById(id);
+const TITLE = D.assignment || D.archive.replace(/\.zip$/i, "");
+const KIND = { disclosed: "自述用 AI", similar: "与他人雷同", rule: "超纲写法", mismatch: "前后不一致", style: "写法风格" };
+const KIND_ORDER = ["disclosed", "similar", "rule", "mismatch", "style"];
+const PRI = { verify: "需核实", follow_up: "建议追问", normal: "无明显线索" };
+const RANK = { verify: 0, follow_up: 1, normal: 2 };
+const STR = { strong: "证据较强", medium: "证据一般", weak: "证据较弱" };
+const withCode = Object.keys(S).filter(id => S[id].files.length);
+const noCode = Object.keys(S).filter(id => !S[id].files.length);
+const state = { tab: "all", kinds: new Set(), q: "", sel: null };
+
+const short = id => parseName(S[id].name).short;
+const kindsOf = id => KIND_ORDER.filter(k => (R[id]?.signals || []).some(s => s.kind === k));
+const pill = p => el("span", { class: "pill pill-" + p }, PRI[p]);
+function fmt(text) {       // `代码` → 等宽字；其余文字里的学号 → 链接
+  return String(text).split(/`([^`\n]+)`/).map((part, i) => i % 2 ? el("code", { class: "ic" }, part) : linkify(part));
+}
+function linkify(text) {   // 文中出现的学号变成可点击链接
+  return String(text).split(/\b(1\d{7})\b/).map((part, i) =>
+    i % 2 && S[part] ? el("a", { href: "#" + part, onclick: e => { e.preventDefault(); open(part); } }, part) : part);
+}
+
+/* —— 数据视图 —— */
+function ordered(ids) {
+  return ids.slice().sort((a, b) => RANK[R[a].priority] - RANK[R[b].priority]
+    || kindsOf(b).includes("disclosed") - kindsOf(a).includes("disclosed")
+    || R[b].signals.length - R[a].signals.length || a.localeCompare(b));
+}
+function inTab(id) {
+  const p = R[id].priority;
+  return state.tab === "all" ? p !== "normal" : state.tab === p;
+}
+function visible() {
+  const q = state.q.trim().toLowerCase();
+  return ordered(withCode.filter(id => R[id] && inTab(id)
+    && (!state.kinds.size || kindsOf(id).some(k => state.kinds.has(k)))
+    && (!q || id.includes(q) || (S[id].name || "").toLowerCase().includes(q))));
+}
+const count = p => withCode.filter(id => R[id] && (p === "all" ? R[id].priority !== "normal" : R[id].priority === p)).length;
+
+/* —— 顶栏 —— */
+function renderTabs() {
+  const tabs = [["all", "优先查看", count("all")], ["verify", "需核实", count("verify")], ["follow_up", "建议追问", count("follow_up")],
+    ["normal", "无明显线索", count("normal")], ["fam", "写法与雷同", FAM.length]];
+  put($("tabs"), tabs.map(([key, label, n]) =>
+    el("button", { class: "tab", role: "tab", "aria-selected": String(state.tab === key), onclick: () => setTab(key) }, label, el("b", {}, String(n)))));
+}
+function setTab(tab) {
+  state.tab = tab;
+  if (state.sel && tab !== "fam" && R[state.sel] && !inTab(state.sel)) state.sel = null;
+  location.hash = tab === "fam" ? "fam" : state.sel || "";
+  render();
+}
+
+/* —— 名单 —— */
+function renderList() {
+  const ids = visible();
+  const kindBtns = KIND_ORDER.map(k => {
+    const n = withCode.filter(id => R[id] && kindsOf(id).includes(k)).length;
+    return el("button", { class: `k k-${k}`, type: "button", "aria-pressed": String(state.kinds.has(k)),
+      onclick: () => { state.kinds.has(k) ? state.kinds.delete(k) : state.kinds.add(k); renderList(); } },
+      el("i"), KIND[k], el("b", {}, String(n)));
+  });
+  const body = [];
+  let last = null;
+  for (const id of ids) {
+    const p = R[id].priority;
+    if (state.tab === "all" && p !== last) {
+      body.push(el("li", { class: "group" }, el("span", {}, PRI[p]), el("span", {}, String(ids.filter(x => R[x].priority === p).length))));
+      last = p;
+    }
+    body.push(el("li", {}, el("button", { class: "row", type: "button", "data-id": id, "aria-current": String(state.sel === id), onclick: () => open(id) },
+      el("span", { class: "who" }, el("span", { class: "sid" }, id), el("span", { class: "nm", title: S[id].name }, short(id))),
+      el("span", { class: "dots" }, kindsOf(id).map(k => el("i", { class: `dot k-${k}`, title: KIND[k] })), pill(p)),
+      el("p", { class: "sum" }, fmt(R[id].summary)))));
+  }
+  put($("list"),
+    el("div", { class: "kinds" }, el("span", { class: "lbl" }, "按线索类型筛选"), kindBtns),
+    ids.length ? el("ol", { class: "rows" }, body) : el("p", { class: "none" }, "没有符合条件的学生。可以取消上面的筛选，或换一个标签。"));
+}
+
+/* —— 证据：真实的代码行（用共享的代码组件）—— */
+function snippet(sid, ref) {
+  const i = ref.lastIndexOf(":"), name = ref.slice(0, i), [a, b] = ref.slice(i + 1).split("-").map(Number), hi = b || a;
+  const file = S[sid].files.find(f => f.name === name);
+  if (!file) return null;
+  return codeBlock({ name, code: file.code, from: a - 2, to: hi + 2, hits: new Set(Array.from({ length: hi - a + 1 }, (_, k) => a + k)), dim: true, compact: true });
+}
+
+/* —— 案卷 —— */
+function renderIntro() {
+  const kindCount = k => withCode.filter(id => R[id] && kindsOf(id).includes(k)).length;
+  put($("case"), el("div", { class: "intro" },
+    el("p", { class: "eyebrow" }, `${TITLE} · 共 ${Object.keys(S).length} 人，${withCode.length} 人有可读代码`),
+    el("h2", {}, "从名单里选一位学生，看他的线索"),
+    el("p", { class: "lead" }, "每条线索都指向一段真实的代码，旁边写着为什么值得问，以及一句可以直接当面问的话。名单按「自述用 AI」「与他人雷同」等较硬的证据排在前面。"),
+    el("ul", { class: "legend" },
+      el("li", {}, pill("verify"), el("span", {}, "线索比较硬，可以当面核对：自己在注释里写明用了 AI 并承认没看懂；与他人的代码逐行相同；程序与题目无关。")),
+      el("li", {}, pill("follow_up"), el("span", {}, "有一条线索，但可能只是正常写法（比如用了作业禁止的结构、写法与自述用 AI 的同学一致）。顺带问一两句即可。")),
+      el("li", {}, pill("normal"), el("span", {}, "没有超出作业要求或与他人雷同的特别之处。这不等于一定没用 AI。"))),
+    el("dl", { class: "tally" }, [["自述用 AI", "disclosed"], ["与他人雷同", "similar"], ["超纲写法", "rule"], ["前后不一致", "mismatch"], ["写法风格", "style"]].map(([label, k]) =>
+      el("div", {}, el("dt", {}, el("i", { class: `dot k-${k}` }), label), el("dd", {}, String(kindCount(k)))))),
+    noCode.length ? el("p", { class: "empty-note" }, `没有可读代码的学生（附件是压缩包 / PDF / 图片，需要助教人工查看）：${noCode.map(id => id + " " + short(id)).join("、")}。`) : null,
+    caveat()));
+}
+function caveat() {
+  return el("p", { class: "caveat" }, "仅凭代码无法判断是否使用了 AI。这么短、写法又被题意固定的程序，AI 写的和同学自己写的可能一模一样；这里列的都是能在代码里逐行核对的线索，用来决定先问谁、问什么，不是结论。自述用 AI 算不算违规，要看 Blackboard 上发布的 AI 使用政策。");
+}
+function renderCase(sid) {
+  const r = R[sid], s = S[sid], nm = parseName(s.name);
+  const list = visible(), at = list.indexOf(sid);
+  const fams = FAM.filter(f => f.members.includes(sid));
+  const step = d => { const t = list[at + d]; if (t) open(t); };
+  put($("case"),
+    el("button", { class: "back", type: "button", onclick: () => { state.sel = null; location.hash = ""; render(); } }, "← 回到名单"),
+    el("header", { class: "case-head" },
+      el("div", {}, el("p", { class: "eyebrow" }, "学生"),
+        el("h2", {}, el("span", { class: "sidn" }, sid), nm.short),
+        nm.en || nm.dept ? el("p", { class: "sub" }, [nm.zh && nm.en, nm.dept].filter(Boolean).join(" · ")) : null),
+      el("div", { class: "case-tools" },
+        el("button", { class: "btn", type: "button", disabled: at <= 0, onclick: () => step(-1) }, "‹ 上一位"),
+        el("button", { class: "btn", type: "button", disabled: at < 0 || at >= list.length - 1, onclick: () => step(1) }, "下一位 ›"),
+        s.has_paper ? el("a", { class: "btn", href: "quiz.html#" + sid }, "对应抽查题 →") : null)),
+    el("p", { class: "verdict" }, pill(r.priority), el("span", {}, fmt(r.summary))),
+    r.stale ? el("p", { class: "caveat" }, "这位同学的代码在评审之后改过，线索可能已经对不上，请重新评审。") : null,
+    r.signals.length ? el("div", { class: "signals" }, r.signals.map(sg =>
+      el("section", { class: `signal k-${sg.kind}` },
+        el("div", { class: "sig-head" }, el("span", { class: `kchip k-${sg.kind}` }, el("i"), KIND[sg.kind]), el("code", { class: "loc" }, sg.ref)),
+        snippet(sid, sg.ref),
+        el("p", { class: "obs" }, fmt(sg.observation)),
+        el("div", { class: "ask" }, el("span", { class: "ask-l" }, "建议问"), el("p", {}, fmt(sg.ask)),
+          el("button", { class: "copy", type: "button", onclick: e => copyText(sg.ask, e.currentTarget) }, "复制"))))) : el("p", { class: "empty-note" }, "没有需要追问的线索。"),
+    fams.length ? el("div", { class: "fams" }, el("h3", {}, "同类写法"), el("div", { class: "fam-links" }, fams.map(f =>
+      el("button", { class: "member", type: "button", onclick: () => setTab("fam") }, f.title)))) : null,
+    el("details", { class: "code" }, el("summary", {}, `查看全部代码（${s.files.length} 个文件）`),
+      s.files.map(f => codeBlock({ name: f.name, code: f.code }))),
+    caveat());
+}
+
+/* —— 写法家族 —— */
+function renderFamilies() {
+  const order = { strong: 0, medium: 1, weak: 2 };
+  const cards = FAM.slice().sort((a, b) => order[a.strength] - order[b.strength]).map(f => {
+    const ex = f.example && S[f.example.sid] ? snippet(f.example.sid, f.example.ref) : null;
+    return el("section", { class: "fam" },
+      el("div", { class: "fam-top" }, el("h3", {}, f.title), el("span", { class: "str str-" + f.strength }, STR[f.strength])),
+      el("p", {}, fmt(f.note)),
+      el("div", { class: "members" }, f.members.map(id => el("button", { class: "member", type: "button", onclick: () => open(id) }, el("span", { class: "sid" }, id), el("span", { class: "nm" }, short(id))))),
+      ex ? [el("p", { class: "example" }, `例：${f.example.sid} · ${f.example.ref}`), ex] : null);
+  });
+  const pairs = PAIRS.length ? el("details", { class: "pairs" },
+    el("summary", {}, `脚本找出的其余雷同对（${PAIRS.length} 组，共有的是全班很少有人写的行；多数只是写法被题意固定，仅供参考）`),
+    PAIRS.map(p => el("div", { class: "pair" }, el("a", { href: "#" + p.a, onclick: e => { e.preventDefault(); open(p.a); } }, p.a), " ~ ",
+      el("a", { href: "#" + p.b, onclick: e => { e.preventDefault(); open(p.b); } }, p.b), `　${p.file_a} ~ ${p.file_b}　共有 ${p.shared_count} 行　整体相似 ${p.ratio}`,
+      el("div", {}, p.shared.slice(0, 3).map(s => el("div", {}, el("code", {}, s.line), ` （全班 ${s.students} 人写过）`)))))) : null;
+  put($("fam-view"), cards, pairs, FAM.length ? null : el("p", { class: "none" }, "还没有整理写法家族。"));
+}
+
+/* —— 路由 —— */
+function open(id) { state.sel = id; if (state.tab === "fam") state.tab = "all"; if (R[id] && !inTab(id)) state.tab = R[id].priority === "normal" ? "normal" : "all"; location.hash = id; render(); }
+function render() {
+  renderTabs();
+  const fam = state.tab === "fam";
+  $("shell").classList.toggle("has-sel", !!state.sel && !fam);
+  $("list").hidden = fam; $("case").hidden = fam; $("fam-view").hidden = !fam;
+  if (fam) { renderFamilies(); return; }
+  renderList();
+  if (state.sel && R[state.sel]) renderCase(state.sel); else renderIntro();
+  const cur = document.querySelector('.row[aria-current="true"]');
+  if (cur) cur.scrollIntoView({ block: "nearest" });
+}
+function route() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (h === "fam") { state.tab = "fam"; }
+  else if (R[h]) { state.sel = h; if (state.tab === "fam" || !inTab(h)) state.tab = R[h].priority === "normal" ? "normal" : "all"; }
+  else if (state.tab === "fam") state.tab = "all";
+  render();
+}
+$("q").addEventListener("input", e => { state.q = e.target.value; if (state.tab === "fam") state.tab = "all"; render(); });
+addEventListener("hashchange", route);
+addEventListener("keydown", e => {
+  if (e.target === $("q")) { if (e.key === "Escape") $("q").blur(); return; }
+  if (e.key === "/") { e.preventDefault(); $("q").focus(); }
+  else if ((e.key === "ArrowDown" || e.key === "j" || e.key === "ArrowUp" || e.key === "k") && state.tab !== "fam") {
+    const ids = visible(), at = ids.indexOf(state.sel), d = (e.key === "ArrowDown" || e.key === "j") ? 1 : -1;
+    const next = ids[at < 0 ? (d > 0 ? 0 : ids.length - 1) : at + d];
+    if (next) { e.preventDefault(); open(next); }
+  }
+});
+new ResizeObserver(() => document.documentElement.style.setProperty("--bar-h", $("bar").offsetHeight + "px")).observe($("bar"));
+document.title = `${TITLE} · 线索排查`;
+$("bar-title").textContent = TITLE;
+$("foot").textContent = "本页由 ta-quiz 技能生成，只含本地数据，没有上传任何内容。学生姓名、学号和代码属于隐私，请勿转发。";
+route();
+</script>
+</body>
+</html>

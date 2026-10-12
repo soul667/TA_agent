@@ -73,6 +73,18 @@ def same_code(a: str, b: str) -> bool:
     return lines(a) == lines(b)
 
 
+def dedupe(student: dict) -> list:
+    """学生常把同样的文件既单独交、又打包进 zip 再交一次；内容相同的只留第一份。"""
+    kept = []
+    for name, code in sorted(student["files"], key=lambda f: f[0].count("/")):  # 路径浅的（散文件）优先保留
+        twin = next((n for n, c in kept if same_code(code, c)), None)
+        if twin:
+            student["notes"].append(f"{name} 与 {twin} 内容相同，已省略")
+        else:
+            kept.append((name, code))
+    return sorted(kept)
+
+
 def safe(name: str) -> bool:
     path = PurePosixPath(name.replace("\\", "/"))
     return not path.is_absolute() and ".." not in path.parts and not re.match(r"^[A-Za-z]:", name)
@@ -81,6 +93,10 @@ def safe(name: str) -> bool:
 def junk(name: str) -> bool:
     parts = name.replace("\\", "/").split("/")
     return "__MACOSX" in parts or parts[-1].startswith("._") or parts[-1] in {".DS_Store", "Thumbs.db"}
+
+
+OTHER_ARCHIVE = {".7z", ".rar", ".tar", ".gz", ".tgz", ".bz2", ".xz"}
+OTHER_MAGIC = ((b"Rar!", "RAR"), (b"7z\xbc\xaf", "7z"))
 
 
 class Reader:
@@ -102,13 +118,19 @@ class Reader:
             return
         suffix = PurePosixPath(display).suffix.lower()
         if suffix == ".zip" and depth < 3:
+            raw = self.read(z, info)
             try:
-                with zipfile.ZipFile(io.BytesIO(self.read(z, info))) as inner:
+                with zipfile.ZipFile(io.BytesIO(raw)) as inner:
                     for item in sorted(inner.infolist(), key=lambda i: i.filename):
                         if not item.is_dir():
                             self.collect(inner, item, f"{display}/{item.filename}", student, depth + 1)
             except (zipfile.BadZipFile, RuntimeError, NotImplementedError) as exc:
-                student["notes"].append(f"压缩附件无法读取：{display}（{type(exc).__name__}）")
+                kind = next((name for magic, name in OTHER_MAGIC if raw.startswith(magic)), None)
+                why = f"实际是 {kind} 文件，不是 zip，请解压后重新打包成 zip" if kind else type(exc).__name__
+                student["notes"].append(f"压缩附件无法读取：{display}（{why}）")
+            return
+        if suffix in OTHER_ARCHIVE:
+            student["notes"].append(f"压缩附件无法读取：{display}（{suffix[1:]} 格式不支持，请解压后重新打包成 zip）")
             return
         if suffix not in CODE_EXT:
             student["ignored"].append(display)
@@ -166,6 +188,7 @@ def unpack(archive: Path) -> tuple[dict, list[str]]:
                     s.update(parse_metadata(decode(reader.read(z, info)) or ""))
                 else:
                     reader.collect(z, info, display, s)
+            s["files"] = dedupe(s)
             text = s.pop("text")
             if text and any(same_code(text, code) for _, code in s["files"]):
                 s["notes"].append("文本框重复粘贴了附件代码，已省略")

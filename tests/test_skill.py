@@ -23,7 +23,16 @@ def load(name):
     return module
 
 
-unpack, build = load("unpack"), load("build")
+unpack, build, similar, pack = load("unpack"), load("build"), load("similar"), load("pack")
+
+
+def load_from(folder: Path) -> dict:
+    mods = {}
+    for name in ("unpack", "build"):
+        spec = importlib.util.spec_from_file_location(f"installed_{name}", folder / f"{name}.py")
+        mods[name] = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mods[name])
+    return mods
 
 
 def make_zip(entries) -> bytes:
@@ -82,6 +91,15 @@ class UnpackTest(Case):
         self.assertIn("无可读代码：12610002", index)
         self.assertFalse((self.tmp / "escape.c").exists())
 
+    def test_unsupported_archives_are_reported(self):
+        _, students = self.run_unpack({
+            bb("12610001", "pa3.7z"): b"7z\xbc\xaf\x27\x1c" + b"\0" * 20,
+            bb("12610002", "pa3.zip"): b"Rar!\x1a\x07\x01\x00" + b"\0" * 20,
+        })
+        self.assertTrue(any("7z 格式不支持" in n for n in students["12610001"]["notes"]))
+        self.assertTrue(any("实际是 RAR 文件" in n for n in students["12610002"]["notes"]))
+        self.assertEqual(students["12610001"]["files"], [])
+
     def test_latest_attempt_and_inline_text(self):
         _, students = self.run_unpack({
             bb("12610001", "old.c", stamp="2026-09-12-09-00-00"): "int main(){return 8;}",
@@ -108,6 +126,16 @@ class UnpackTest(Case):
         self.assertEqual(sorted(students), ["12345678", "87654321"])
         self.assertEqual([f["name"] for f in students["12345678"]["files"]], ["main.c"])
         self.assertEqual([f["name"] for f in students["87654321"]["files"]], ["李四-87654321.zip/hw/main.py"])
+
+    def test_same_file_loose_and_inside_zip_is_read_once(self):
+        inner = make_zip({"pa2/main.c": "int main(){return 0;}\n", "pa2/extra.c": "int x;\n"})
+        _, students = self.run_unpack({
+            bb("12610001", "main.c"): "int main(){return 0;}\r\n",
+            bb("12610001", "pa2.zip"): inner,
+        })
+        files = students["12610001"]["files"]
+        self.assertEqual([f["name"] for f in files], ["main.c", "pa2.zip/pa2/extra.c"])
+        self.assertTrue(any("内容相同" in n for n in students["12610001"]["notes"]))
 
     def test_zip_without_student_ids_fails_clearly(self):
         archive = self.tmp / "x.zip"
@@ -156,6 +184,16 @@ class BuildTest(Case):
         self.assertEqual(paper["questions"][0]["lines"], ["main.c:1"])
         self.assertFalse(paper["stale"])
 
+    def test_warns_when_single_choice_answers_are_all_the_same_letter(self):
+        question = {"type": "single", "question": "x?", "choices": ["对", "错", "不知道"], "answer": "A", "lines": ["main.c:1"]}
+        text = {"type": "text", "question": "为什么？", "answer": "因为", "lines": ["main.c:1"]}
+        students = json.loads((self.ws / "students.json").read_text(encoding="utf-8"))["students"]
+        for sid, s in students.items():
+            self.write(sid, {"fingerprint": s["fingerprint"], "summary": "s", "questions": [question] * 4 + [text]})
+        report, ok = build.build(self.ws)
+        self.assertTrue(ok, report)
+        self.assertIn("8 / 8 道单选题的答案都是 A", report)
+
     def test_student_text_cannot_break_out_of_data_block(self):
         self.write("12610001", {**GOOD, "fingerprint": self.fp})
         build.build(self.ws)
@@ -191,6 +229,165 @@ class BuildTest(Case):
         self.assertTrue(ok)
         self.assertIn("可能过期：12610001", report)
         self.assertTrue(self.page_data()["papers"]["12610001"]["stale"])
+
+
+class ReviewTest(Case):
+    """AI 线索排查：reviews/、families.json、similar.py 与 review.html。"""
+
+    def setUp(self):
+        super().setUp()
+        self.ws, students = self.run_unpack({
+            bb("12610001", "main.c"): "int main(){\n  return 0;\n}\n",
+            bb("12610002", "main.c"): "int main(){\n  return 1;\n}\n",
+            bb("12610003", "shot.png"): b"\x89PNG",
+        })
+        self.fp = students["12610001"]["fingerprint"]
+        (self.ws / "reviews").mkdir()
+
+    def write(self, sid, review):
+        (self.ws / "reviews" / f"{sid}.json").write_text(json.dumps(review, ensure_ascii=False), encoding="utf-8")
+
+    def page(self):
+        html = (self.ws / "review.html").read_text(encoding="utf-8")
+        raw = html.split('<script id="data" type="application/json">')[1].split("</script>")[0]
+        return json.loads(raw)
+
+    def test_valid_review_builds_page_with_families_and_similar(self):
+        self.write("12610001", {"fingerprint": self.fp, "priority": "verify", "summary": "自述用了 AI",
+                                "signals": [{"kind": "disclosed", "ref": "main.c:2", "observation": "注释写明用了 AI", "ask": "能解释吗？"}]})
+        self.write("12610002", {"fingerprint": "old", "priority": "normal", "summary": "没有线索", "signals": []})
+        (self.ws / "families.json").write_text(json.dumps([{"title": "同一写法", "strength": "weak", "note": "说明", "members": ["12610001"]}]))
+        (self.ws / "similar.json").write_text("[]")
+        report, ok = build.build(self.ws)
+        self.assertTrue(ok, report)
+        self.assertIn("需核实 1", report)
+        page = self.page()
+        self.assertEqual(page["reviews"]["12610001"]["signals"][0]["ref"], "main.c:2")
+        self.assertTrue(page["reviews"]["12610002"]["stale"])
+        self.assertEqual(len(page["families"]), 1)
+        self.assertEqual(page["students"]["12610003"]["files"], [])
+
+    def test_review_format_errors_are_reported(self):
+        self.write("12610001", {"priority": "verify", "summary": "x", "signals": []})
+        self.write("12610002", {"priority": "maybe", "summary": "x", "signals": []})
+        report, ok = build.build(self.ws)
+        self.assertFalse(ok)
+        self.assertIn("提高追问优先级必须给出具体的代码线索", report)
+        self.assertIn("priority 只能是", report)
+        self.write("12610001", {"priority": "follow_up", "summary": "x", "signals": [
+            {"kind": "guess", "ref": "main.c:99", "observation": "", "ask": "?"}]})
+        self.write("12610002", {"priority": "normal", "summary": "ok"})
+        report, ok = build.build(self.ws)
+        for expected in ("kind 只能是", "行号引用无效", "observation 为空"):
+            self.assertIn(expected, report)
+
+    def test_families_must_name_real_students(self):
+        self.write("12610001", {"fingerprint": self.fp, "priority": "normal", "summary": "ok"})
+        (self.ws / "families.json").write_text(json.dumps([
+            {"title": "t", "strength": "huge", "note": "n", "members": ["12610001", "99999999"]}]))
+        report, ok = build.build(self.ws)
+        self.assertFalse(ok)
+        self.assertIn("strength 只能是", report)
+        self.assertIn("99999999", report)
+
+    def test_similar_uses_rare_shared_lines_not_formatting(self):
+        common = "int main() {\n  printf(\"hi\\n\");\n  return 0;\n}\n"
+        quirk = "  printf(\"The space occupied by long is %d bytes\\n\", -((int)&b - (int)&c));\n"
+        def student(extra):
+            code = "#include <stdio.h>\nlong b; int c;\n" + common.replace("  return 0;", extra + "  return 0;")
+            return {"files": [{"name": "calc_long.c", "code": code}]}
+        students = {sid: student(quirk if sid in ("1", "2") else "  printf(\"x%d\\n\", %s);\n" % (i, i))
+                    for i, sid in enumerate("123456")}
+        students["2"]["files"][0]["code"] = students["2"]["files"][0]["code"].replace("  printf", "      printf")  # 只改缩进
+        students["1"]["files"][0]["code"] += "// extra line one\n// extra line two\n// extra line three\n"
+        students["2"]["files"][0]["code"] += "// extra line one\n// extra line two\n// extra line three\n"
+        pairs = similar.compare(students, min_shared=3, rare=2)
+        self.assertEqual([(p["a"], p["b"]) for p in pairs], [("1", "2")])
+        self.assertGreaterEqual(pairs[0]["shared_count"], 3)
+        # 全班都写过的行不算证据
+        self.assertEqual(similar.compare(students, min_shared=3, rare=1), [])
+
+
+class PageTest(Case):
+    """页面生成：字体和共享代码组件被嵌入，学生代码里的占位符字样不会破坏页面。"""
+
+    def test_fonts_and_shared_code_are_embedded_and_data_is_safe(self):
+        code = '/*__FONTS__*/\nchar *s = "__DATA__ </script> //__SHARED_JS__";\nint main(){}\n'
+        ws, students = self.run_unpack({bb("12610001", "main.c"): code})
+        (ws / "papers").mkdir()
+        paper = {**GOOD, "fingerprint": students["12610001"]["fingerprint"]}
+        (ws / "papers/12610001.json").write_text(json.dumps(paper, ensure_ascii=False), encoding="utf-8")
+        (ws / "reviews").mkdir()
+        report, ok = build.build(ws)
+        self.assertTrue(ok, report)
+        for name in ("quiz.html", "review.html"):
+            html = (ws / name).read_text(encoding="utf-8")
+            template, rest = html.split('<script id="data" type="application/json">')
+            data, scripts = rest.split("</script>", 1)
+            for marker in ("/*__SHARED_CSS__*/", "//__SHARED_JS__", "/*__FONTS__*/", "__DATA__"):
+                self.assertNotIn(marker, template + scripts, f"{name} 里还有未替换的占位符 {marker}")
+            self.assertEqual(html.count("@font-face"), 5, name)
+            self.assertIn('font-family:"TA Sans"', html)
+            self.assertIn("function codeBlock", html)
+            self.assertIn("function highlightC", html)
+            self.assertEqual(json.loads(data)["students"]["12610001"]["files"][0]["code"], code.replace("\r\n", "\n"))
+            self.assertNotIn("</script> //__SHARED_JS__", html)   # 学生代码里的 </script> 被转义，不会提前结束数据块
+            self.assertIn("__DATA__", data)                      # 学生代码里的占位符字样原样保留在数据里
+
+    def test_all_font_files_exist(self):
+        assets = SCRIPTS.parent / "assets"
+        for stem in build.FONTS:
+            self.assertGreater((assets / "fonts" / f"{stem}.woff2").stat().st_size, 1000, stem)
+        self.assertTrue((assets / "fonts" / "LICENSE-OFL.txt").exists())
+
+
+class PackTest(Case):
+    def test_site_zip_is_self_contained_and_noindex(self):
+        ws, students = self.run_unpack({bb("12610001", "main.c"): "int x;\nint main(){return x;}\n"})
+        (ws / "papers").mkdir()
+        (ws / "papers/12610001.json").write_text(json.dumps({**GOOD, "fingerprint": students["12610001"]["fingerprint"]}), encoding="utf-8")
+        (ws / "reviews").mkdir()
+        build.build(ws)
+        out = self.tmp / "dist" / "site.zip"
+        names = pack.site(ws, out)
+        self.assertEqual(sorted(names), sorted(["index.html", "quiz.html", "review.html", "robots.txt", "_headers", "部署说明.txt"]))
+        with zipfile.ZipFile(out) as z:
+            self.assertIsNone(z.testzip())
+            for page in ("index.html", "quiz.html", "review.html"):
+                self.assertIn('name="robots" content="noindex, nofollow"', z.read(page).decode("utf-8"), page)
+            index = z.read("index.html").decode("utf-8")
+            self.assertIn('href="quiz.html"', index)
+            self.assertIn('href="review.html"', index)
+            self.assertEqual(z.read("robots.txt").decode(), "User-agent: *\nDisallow: /\n")
+            self.assertNotIn("https://", z.read("quiz.html").decode("utf-8").split("</style>")[0].replace("http://www.w3.org", ""))
+
+    def test_site_without_review_has_no_review_link(self):
+        ws, _ = self.run_unpack({bb("12610001", "main.c"): "int x;\n"})
+        build.build(ws)
+        names = pack.site(ws, self.tmp / "s.zip")
+        self.assertNotIn("review.html", names)
+        with zipfile.ZipFile(self.tmp / "s.zip") as z:
+            self.assertNotIn("review.html", z.read("index.html").decode("utf-8"))
+
+    def test_skill_zip_has_everything_and_nothing_else(self):
+        out = self.tmp / "skill.zip"
+        names = pack.skill(out)
+        self.assertIn("ta-quiz/SKILL.md", names)
+        for need in ("scripts/unpack.py", "scripts/build.py", "scripts/similar.py", "scripts/pack.py", "assets/quiz.html",
+                     "assets/review.html", "assets/shared.css", "assets/shared.js", "assets/fonts/TASans-Regular.woff2"):
+            self.assertIn("ta-quiz/" + need, names)
+        self.assertFalse([n for n in names if "__pycache__" in n or n.endswith(".pyc") or "workspace" in n])
+        # 解压出来就能独立运行：拆包并生成页面
+        with zipfile.ZipFile(out) as z:
+            z.extractall(self.tmp / "installed")
+        archive = self.tmp / "hw.zip"
+        archive.write_bytes(make_zip({bb("12610001", "main.c"): "int main(){return 0;}\n"}))
+        installed = load_from(self.tmp / "installed/ta-quiz/scripts")
+        ws = self.tmp / "ws2"
+        with contextlib.redirect_stdout(io.StringIO()):
+            installed["unpack"].main([str(archive), "--out", str(ws)])
+            installed["build"].build(ws)
+        self.assertGreater((ws / "quiz.html").stat().st_size, 1_000_000)   # 字体被嵌进去了
 
 
 if __name__ == "__main__":
