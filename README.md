@@ -6,6 +6,10 @@
 2. **Claude 出题**：读每个学生自己的代码，出 3–5 道只针对他本人代码的抽查题（单选 / 多选 / 简答，附 TA 参考答案）
 3. **输入学号看题**：在生成的 `quiz.html` 里输入学号（可只输末几位或姓名），或者直接在对话里报学号
 
+想知道哪些人可能用了 AI，再说一句「排查 AI 线索」，Claude 会另做一个页面 `review.html`：列出**能在代码里逐行核对的线索**
+（自己写明用了 AI、与他人代码逐行相同、用了作业禁止的写法、程序与题目无关），每条带真实的代码行和一句中性的追问。
+代码风格本身不能证明用了 AI，所以页面给的是「先问谁、问什么」，不是结论。
+
 整个仓库就是一个 Claude 技能：[`.claude/skills/ta-quiz/`](.claude/skills/ta-quiz/SKILL.md)。没有服务器，不需要 API Key，
 脚本只用 Python 3.8+ 标准库。
 
@@ -33,6 +37,8 @@ cp -r .claude/skills/ta-quiz ~/.claude/skills/
 | `blueprint.md` | 本次作业的出题口径（考点、超纲边界、常见错误） |
 | `papers/<学号>.json` | 该生的题目和参考答案 |
 | `quiz.html` | 查询页面：双击打开，首页是全班名单；输入学号看试卷和代码，可显示答案、打印 |
+| `reviews/<学号>.json`、`families.json`、`similar.json` | AI 线索：每人的线索与追问、多人共有的写法、代码雷同对 |
+| `review.html` | 线索排查页：按「需核实 / 建议追问」排序，可按线索类型筛选，点开看证据代码，可跳到该生的抽查题 |
 
 想换题、改难度、出英文版，直接在对话里说，Claude 改完会重新生成页面。
 
@@ -42,8 +48,9 @@ cp -r .claude/skills/ta-quiz ~/.claude/skills/
 .claude/skills/ta-quiz/
 ├── SKILL.md            出题流程和规则（Claude 照着做）
 ├── scripts/unpack.py   拆 ZIP → 每人一份带行号的代码（只读文本，不运行学生文件）
-├── scripts/build.py    检查题目格式 → 生成 quiz.html
-└── assets/quiz.html    查询页面模板
+├── scripts/similar.py  找出代码雷同的学生对（只看全班罕见的共同行）
+├── scripts/build.py    检查题目和线索的格式 → 生成 quiz.html、review.html
+└── assets/             quiz.html、review.html 页面模板
 examples/demo.zip       示例作业包
 tests/test_skill.py     python3 -m unittest discover tests
 ```

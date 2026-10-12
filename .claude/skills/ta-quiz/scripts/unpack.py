@@ -73,6 +73,18 @@ def same_code(a: str, b: str) -> bool:
     return lines(a) == lines(b)
 
 
+def dedupe(student: dict) -> list:
+    """学生常把同样的文件既单独交、又打包进 zip 再交一次；内容相同的只留第一份。"""
+    kept = []
+    for name, code in sorted(student["files"], key=lambda f: f[0].count("/")):  # 路径浅的（散文件）优先保留
+        twin = next((n for n, c in kept if same_code(code, c)), None)
+        if twin:
+            student["notes"].append(f"{name} 与 {twin} 内容相同，已省略")
+        else:
+            kept.append((name, code))
+    return sorted(kept)
+
+
 def safe(name: str) -> bool:
     path = PurePosixPath(name.replace("\\", "/"))
     return not path.is_absolute() and ".." not in path.parts and not re.match(r"^[A-Za-z]:", name)
@@ -166,6 +178,7 @@ def unpack(archive: Path) -> tuple[dict, list[str]]:
                     s.update(parse_metadata(decode(reader.read(z, info)) or ""))
                 else:
                     reader.collect(z, info, display, s)
+            s["files"] = dedupe(s)
             text = s.pop("text")
             if text and any(same_code(text, code) for _, code in s["files"]):
                 s["notes"].append("文本框重复粘贴了附件代码，已省略")

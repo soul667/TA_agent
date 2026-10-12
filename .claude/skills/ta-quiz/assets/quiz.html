@@ -216,6 +216,7 @@ body.show-key .opts li.correct .letter::after { content: ""; position: absolute;
         <button type="button" id="next" aria-label="下一位">›</button>
       </div>
       <label class="switch"><input type="checkbox" id="show-key"><span class="track"></span><span>显示答案</span></label>
+      <a class="btn" id="to-review" href="review.html" hidden>线索排查</a>
       <button type="button" class="btn" id="print">打印</button>
     </div>
   </div>
@@ -373,6 +374,8 @@ function showStudent(id) {
   $("prev").disabled = at === 0;
   $("next").disabled = at === ids.length - 1;
   keyBox.disabled = !p;
+  $("to-review").hidden = !D.has_review;
+  $("to-review").href = "review.html#" + id;
   const sheet = el("article", { class: "sheet" }, paperHead(id, s, p && p.questions.length));
   if (st === "empty") {
     sheet.append(el("div", { class: "notice" }, el("b", {}, "这份提交里没有可读的代码或文字"),

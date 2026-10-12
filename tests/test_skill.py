@@ -23,7 +23,7 @@ def load(name):
     return module
 
 
-unpack, build = load("unpack"), load("build")
+unpack, build, similar = load("unpack"), load("build"), load("similar")
 
 
 def make_zip(entries) -> bytes:
@@ -109,6 +109,16 @@ class UnpackTest(Case):
         self.assertEqual([f["name"] for f in students["12345678"]["files"]], ["main.c"])
         self.assertEqual([f["name"] for f in students["87654321"]["files"]], ["李四-87654321.zip/hw/main.py"])
 
+    def test_same_file_loose_and_inside_zip_is_read_once(self):
+        inner = make_zip({"pa2/main.c": "int main(){return 0;}\n", "pa2/extra.c": "int x;\n"})
+        _, students = self.run_unpack({
+            bb("12610001", "main.c"): "int main(){return 0;}\r\n",
+            bb("12610001", "pa2.zip"): inner,
+        })
+        files = students["12610001"]["files"]
+        self.assertEqual([f["name"] for f in files], ["main.c", "pa2.zip/pa2/extra.c"])
+        self.assertTrue(any("内容相同" in n for n in students["12610001"]["notes"]))
+
     def test_zip_without_student_ids_fails_clearly(self):
         archive = self.tmp / "x.zip"
         archive.write_bytes(make_zip({"main.c": "int main(){}"}))
@@ -191,6 +201,83 @@ class BuildTest(Case):
         self.assertTrue(ok)
         self.assertIn("可能过期：12610001", report)
         self.assertTrue(self.page_data()["papers"]["12610001"]["stale"])
+
+
+class ReviewTest(Case):
+    """AI 线索排查：reviews/、families.json、similar.py 与 review.html。"""
+
+    def setUp(self):
+        super().setUp()
+        self.ws, students = self.run_unpack({
+            bb("12610001", "main.c"): "int main(){\n  return 0;\n}\n",
+            bb("12610002", "main.c"): "int main(){\n  return 1;\n}\n",
+            bb("12610003", "shot.png"): b"\x89PNG",
+        })
+        self.fp = students["12610001"]["fingerprint"]
+        (self.ws / "reviews").mkdir()
+
+    def write(self, sid, review):
+        (self.ws / "reviews" / f"{sid}.json").write_text(json.dumps(review, ensure_ascii=False), encoding="utf-8")
+
+    def page(self):
+        html = (self.ws / "review.html").read_text(encoding="utf-8")
+        raw = html.split('<script id="data" type="application/json">')[1].split("</script>")[0]
+        return json.loads(raw)
+
+    def test_valid_review_builds_page_with_families_and_similar(self):
+        self.write("12610001", {"fingerprint": self.fp, "priority": "verify", "summary": "自述用了 AI",
+                                "signals": [{"kind": "disclosed", "ref": "main.c:2", "observation": "注释写明用了 AI", "ask": "能解释吗？"}]})
+        self.write("12610002", {"fingerprint": "old", "priority": "normal", "summary": "没有线索", "signals": []})
+        (self.ws / "families.json").write_text(json.dumps([{"title": "同一写法", "strength": "weak", "note": "说明", "members": ["12610001"]}]))
+        (self.ws / "similar.json").write_text("[]")
+        report, ok = build.build(self.ws)
+        self.assertTrue(ok, report)
+        self.assertIn("需核实 1", report)
+        page = self.page()
+        self.assertEqual(page["reviews"]["12610001"]["signals"][0]["ref"], "main.c:2")
+        self.assertTrue(page["reviews"]["12610002"]["stale"])
+        self.assertEqual(len(page["families"]), 1)
+        self.assertEqual(page["students"]["12610003"]["files"], [])
+
+    def test_review_format_errors_are_reported(self):
+        self.write("12610001", {"priority": "verify", "summary": "x", "signals": []})
+        self.write("12610002", {"priority": "maybe", "summary": "x", "signals": []})
+        report, ok = build.build(self.ws)
+        self.assertFalse(ok)
+        self.assertIn("提高追问优先级必须给出具体的代码线索", report)
+        self.assertIn("priority 只能是", report)
+        self.write("12610001", {"priority": "follow_up", "summary": "x", "signals": [
+            {"kind": "guess", "ref": "main.c:99", "observation": "", "ask": "?"}]})
+        self.write("12610002", {"priority": "normal", "summary": "ok"})
+        report, ok = build.build(self.ws)
+        for expected in ("kind 只能是", "行号引用无效", "observation 为空"):
+            self.assertIn(expected, report)
+
+    def test_families_must_name_real_students(self):
+        self.write("12610001", {"fingerprint": self.fp, "priority": "normal", "summary": "ok"})
+        (self.ws / "families.json").write_text(json.dumps([
+            {"title": "t", "strength": "huge", "note": "n", "members": ["12610001", "99999999"]}]))
+        report, ok = build.build(self.ws)
+        self.assertFalse(ok)
+        self.assertIn("strength 只能是", report)
+        self.assertIn("99999999", report)
+
+    def test_similar_uses_rare_shared_lines_not_formatting(self):
+        common = "int main() {\n  printf(\"hi\\n\");\n  return 0;\n}\n"
+        quirk = "  printf(\"The space occupied by long is %d bytes\\n\", -((int)&b - (int)&c));\n"
+        def student(extra):
+            code = "#include <stdio.h>\nlong b; int c;\n" + common.replace("  return 0;", extra + "  return 0;")
+            return {"files": [{"name": "calc_long.c", "code": code}]}
+        students = {sid: student(quirk if sid in ("1", "2") else "  printf(\"x%d\\n\", %s);\n" % (i, i))
+                    for i, sid in enumerate("123456")}
+        students["2"]["files"][0]["code"] = students["2"]["files"][0]["code"].replace("  printf", "      printf")  # 只改缩进
+        students["1"]["files"][0]["code"] += "// extra line one\n// extra line two\n// extra line three\n"
+        students["2"]["files"][0]["code"] += "// extra line one\n// extra line two\n// extra line three\n"
+        pairs = similar.compare(students, min_shared=3, rare=2)
+        self.assertEqual([(p["a"], p["b"]) for p in pairs], [("1", "2")])
+        self.assertGreaterEqual(pairs[0]["shared_count"], 3)
+        # 全班都写过的行不算证据
+        self.assertEqual(similar.compare(students, min_shared=3, rare=1), [])
 
 
 if __name__ == "__main__":
