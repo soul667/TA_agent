@@ -1,0 +1,57 @@
+/* 两个页面共用：字体栈 + 代码组件。构建时由 build.py 注入到页面样式的最前面。 */
+:root {
+  --sans: "TA Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", system-ui, sans-serif;
+  --mono: "TA Mono", "TA Sans", ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  /* 代码组件：浅色 */
+  --code-bg: #f8f9fb; --code-head: #eff2f6; --code-line: #dfe5ec; --code-fg: #1c2733; --code-no: #94a0ae;
+  --code-hit: #fff4bd; --code-hit-edge: #e5a800; --code-ring: #c9d2dd;
+  --tok-kw: #6d28d9; --tok-ty: #0f766e; --tok-str: #15803d; --tok-num: #b45309;
+  --tok-pre: #be185d; --tok-fn: #1d4ed8; --tok-com: #7d8b9c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --code-bg: #10161d; --code-head: #161e27; --code-line: #26313d; --code-fg: #dbe3ec; --code-no: #66747f;
+    --code-hit: #3b3416; --code-hit-edge: #e0b323; --code-ring: #34414f;
+    --tok-kw: #c4b5fd; --tok-ty: #5eead4; --tok-str: #86efac; --tok-num: #fcd34d;
+    --tok-pre: #f9a8d4; --tok-fn: #93c5fd; --tok-com: #7a8a9c;
+  }
+}
+:root[data-theme="dark"] {
+  --code-bg: #10161d; --code-head: #161e27; --code-line: #26313d; --code-fg: #dbe3ec; --code-no: #66747f;
+  --code-hit: #3b3416; --code-hit-edge: #e0b323; --code-ring: #34414f;
+  --tok-kw: #c4b5fd; --tok-ty: #5eead4; --tok-str: #86efac; --tok-num: #fcd34d;
+  --tok-pre: #f9a8d4; --tok-fn: #93c5fd; --tok-com: #7a8a9c;
+}
+
+/* —— 代码组件 .cb —— */
+.cb { border: 1px solid var(--code-line); border-radius: 10px; background: var(--code-bg); color: var(--code-fg); overflow: hidden; min-width: 0; }
+.cb-head { display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 14px; background: var(--code-head); border-bottom: 1px solid var(--code-line); }
+.cb-name { flex: 1; min-width: 0; font: 500 12.5px/1.5 var(--mono); overflow-wrap: anywhere; }
+.cb-meta { font: 400 12px/1 var(--sans); color: var(--code-no); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cb-lang { font: 700 10px/1 var(--sans); letter-spacing: .08em; padding: 4px 6px; border-radius: 4px; background: var(--code-line); color: var(--code-no); }
+.cb-copy { border: 0; background: none; color: var(--code-no); font: 500 12px/1 var(--sans); padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+.cb-copy:hover { background: var(--code-line); color: var(--code-fg); }
+.cb-body { overflow: auto; max-height: var(--cb-max, none); overscroll-behavior: contain; }
+.cb-in { display: block; width: max-content; min-width: 100%; padding-block: 8px; font: 400 13px/1.75 var(--mono); font-feature-settings: "liga" 0, "calt" 0; font-variant-ligatures: none; tab-size: 4; }
+.cb-row { display: flex; white-space: pre; }
+.cb-mk, .cb-no { position: sticky; background: var(--code-bg); user-select: none; z-index: 1; }
+.cb-mk { left: 0; flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; gap: 1px; min-width: 2.2em; padding-left: 8px; }
+.cb-no { left: 2.2em; flex: 0 0 auto; width: 3.4em; padding-right: 1em; text-align: right; color: var(--code-no); font-variant-numeric: tabular-nums; }
+.cb-compact .cb-mk { min-width: .6em; padding-left: 4px; } .cb-compact .cb-no { left: .6em; }
+.cb-src { padding-right: 18px; }
+.cb-row.hit, .cb-row.hit .cb-mk, .cb-row.hit .cb-no { background: var(--code-hit); }
+.cb-row.hit .cb-no { color: var(--code-fg); box-shadow: inset -3px 0 0 var(--code-hit-edge); font-weight: 500; }
+.cb-row.dim .cb-src { opacity: .62; }
+.cb-row.focus, .cb-row.focus .cb-mk, .cb-row.focus .cb-no { background: var(--code-hit-edge); color: #1c2733; }
+.cb-row { transition: background-color .5s; }
+.cb-badge { border: 0; background: var(--code-hit-edge); color: #1c2733; font: 700 11px/1 var(--sans); min-width: 1.55em; height: 1.55em; padding: 0 5px; border-radius: 999px; cursor: pointer; }
+.cb-badge:hover { filter: brightness(.92); }
+.cb-gap { color: var(--code-no); font-size: 12px; padding: 2px 0 2px 5.8em; user-select: none; letter-spacing: .3em; }
+.t-kw { color: var(--tok-kw); font-weight: 500; } .t-ty { color: var(--tok-ty); } .t-str { color: var(--tok-str); }
+.t-num { color: var(--tok-num); } .t-pre { color: var(--tok-pre); } .t-fn { color: var(--tok-fn); } .t-com { color: var(--tok-com); }
+.cb-plain .cb-src { color: var(--code-fg); }
+@media print {
+  .cb { border-color: #bbb; } .cb-body { max-height: none !important; overflow: visible; }
+  .cb-in { width: auto; } .cb-row { white-space: pre-wrap; } .cb-copy, .cb-lang { display: none; }
+  .cb-mk, .cb-no { position: static; } .cb-badge { border: 1px solid #333; background: none; color: #000; }
+}

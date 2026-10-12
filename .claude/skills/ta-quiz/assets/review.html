@@ -4,183 +4,172 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AI 线索排查</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap">
 <style>
+/*__FONTS__*/
+/*__SHARED_CSS__*/
 /* 布局：左边按优先级排的名单，右边是一位学生的「案卷」；证据是真实的代码行。
-   色彩与抽查卷同源：蓝黑墨水写字，红色只用于「自述」这类最硬的线索，琥珀色是雷同，蓝色是超纲，青色是前后不一致。 */
+   色彩与抽查卷同源：红色只给「自述」这类最硬的线索，琥珀色是雷同，蓝色是超纲，青色是前后不一致。 */
 :root {
-  --desk: #e8ecf0; --paper: #fff; --ink: #18212c; --ink-2: #5b6877; --rule: #d4dbe3;
-  --blue: #2448a3; --blue-wash: #e9eefa;
-  --red: #c42a2a; --red-wash: #fcefee;
-  --amber: #8f5300; --amber-wash: #fff3db;
+  --bg: #eceff4; --card: #ffffff; --ink: #17202b; --ink-2: #5a6878; --line: #dce2ea;
+  --accent: #2448a3; --accent-wash: #e8eefb;
+  --red: #c62828; --red-wash: #fdeeee;
+  --amber: #8a5300; --amber-wash: #fff3d9;
   --teal: #0b6b66; --teal-wash: #e1f2f0;
-  --mark: #fff1ad; --mark-dim: #f3f5f8;
-  --shadow: 0 1px 2px rgb(24 33 44 / .06), 0 10px 30px rgb(24 33 44 / .08);
-  --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
-  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --shadow: 0 1px 2px rgb(23 32 43 / .05), 0 8px 28px rgb(23 32 43 / .07);
   --bar-h: 58px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --desk: #0e1216; --paper: #171c22; --ink: #e3e8ee; --ink-2: #95a3b3; --rule: #2a323c;
-    --blue: #93afff; --blue-wash: #1c2640; --red: #ff8b80; --red-wash: #3a1f1f;
-    --amber: #f2c46b; --amber-wash: #33280f; --teal: #6fd3cd; --teal-wash: #143231;
-    --mark: #3b3519; --mark-dim: #1d2329;
-    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px rgb(0 0 0 / .35);
+    --bg: #0d1117; --card: #151b23; --ink: #e6edf3; --ink-2: #9aa7b6; --line: #28313c;
+    --accent: #8fb0ff; --accent-wash: #1b2740; --red: #ff8f86; --red-wash: #3b2022;
+    --amber: #f0c36d; --amber-wash: #33290f; --teal: #6fd3cd; --teal-wash: #143231;
+    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 8px 28px rgb(0 0 0 / .35);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --desk: #0e1216; --paper: #171c22; --ink: #e3e8ee; --ink-2: #95a3b3; --rule: #2a323c;
-  --blue: #93afff; --blue-wash: #1c2640; --red: #ff8b80; --red-wash: #3a1f1f;
-  --amber: #f2c46b; --amber-wash: #33280f; --teal: #6fd3cd; --teal-wash: #143231;
-  --mark: #3b3519; --mark-dim: #1d2329;
-  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px rgb(0 0 0 / .35);
+  --bg: #0d1117; --card: #151b23; --ink: #e6edf3; --ink-2: #9aa7b6; --line: #28313c;
+  --accent: #8fb0ff; --accent-wash: #1b2740; --red: #ff8f86; --red-wash: #3b2022;
+  --amber: #f0c36d; --amber-wash: #33290f; --teal: #6fd3cd; --teal-wash: #143231;
+  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 8px 28px rgb(0 0 0 / .35);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html { scroll-padding-top: calc(var(--bar-h) + 12px); }
-body { margin: 0; background: var(--desk); color: var(--ink); font: 15px/1.65 var(--sans); -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.7 var(--sans); -webkit-font-smoothing: antialiased; }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 [hidden] { display: none !important; }
-a { color: var(--blue); }
+h1, h2, h3, p { margin: 0; }
+a { color: var(--accent); }
+.ic { font: 500 .88em var(--mono); background: var(--accent-wash); padding: 1px 6px; border-radius: 5px; }
 
 /* —— 顶栏 —— */
-.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); border-bottom: 1px solid var(--rule); }
-.bar-in { max-width: 1360px; margin: 0 auto; padding: 9px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
-.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 0 1 auto; }
-.brand b { font: 700 18px/1 var(--serif); letter-spacing: .08em; white-space: nowrap; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.bar-in { max-width: 1400px; margin: 0 auto; padding: 9px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+.brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.brand b { font-size: 18px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
 .brand span { color: var(--ink-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--desk); border-radius: 8px; flex: 1 1 auto; }
-.tab { border: 0; background: none; padding: 5px 12px; border-radius: 6px; font-size: 14px; color: var(--ink-2); white-space: nowrap; }
-.tab b { font: 600 12px var(--mono); margin-left: 6px; padding: 0 5px; border-radius: 4px; background: var(--rule); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--bg); border-radius: 10px; flex: 1 1 auto; }
+.tab { border: 0; background: none; padding: 5px 13px; border-radius: 8px; font-size: 14px; color: var(--ink-2); white-space: nowrap; }
+.tab b { font: 500 12px var(--mono); margin-left: 7px; padding: 0 6px; border-radius: 5px; background: var(--line); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .tab:hover { color: var(--ink); }
-.tab[aria-selected="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .12); font-weight: 600; }
-.tab[aria-selected="true"] b { background: var(--ink); color: var(--paper); }
-.find { position: relative; flex: 0 1 220px; min-width: 150px; }
-.find input { width: 100%; padding: 7px 34px 7px 12px; border: 1px solid var(--rule); border-radius: 6px; background: var(--desk); font-variant-numeric: tabular-nums; }
+.tab[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .14); font-weight: 700; }
+.tab[aria-selected="true"] b { background: var(--ink); color: var(--card); }
+.find { position: relative; flex: 0 1 230px; min-width: 150px; }
+.find input { width: 100%; padding: 7px 36px 7px 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-variant-numeric: tabular-nums; }
 .find input::placeholder { color: var(--ink-2); }
-.find input:focus { outline: none; border-color: var(--blue); background: var(--paper); box-shadow: 0 0 0 3px var(--blue-wash); }
-.find kbd { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font: 12px var(--mono); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 4px; padding: 0 5px; pointer-events: none; }
+.find input:focus { outline: none; border-color: var(--accent); background: var(--card); box-shadow: 0 0 0 3px var(--accent-wash); }
+.find kbd { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font: 12px var(--mono); color: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; pointer-events: none; }
 
 /* —— 版面 —— */
-.shell { max-width: 1360px; margin: 0 auto; padding: 16px 16px 56px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 960px) {
-  .shell { grid-template-columns: 380px minmax(0, 1fr); align-items: start; }
-  .list { position: sticky; top: calc(var(--bar-h) + 16px); max-height: calc(100vh - var(--bar-h) - 32px); overflow: auto; }
+.shell { max-width: 1400px; margin: 0 auto; padding: 18px 20px 56px; display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 980px) {
+  .shell { grid-template-columns: 390px minmax(0, 1fr); align-items: start; }
+  .list { position: sticky; top: calc(var(--bar-h) + 18px); max-height: calc(100vh - var(--bar-h) - 36px); overflow: auto; }
 }
-@media (max-width: 959px) { .shell.has-sel .list { display: none; } .shell:not(.has-sel) .case { display: none; } }
-.list { background: var(--paper); border-radius: 6px; box-shadow: var(--shadow); min-width: 0; }
-.kinds { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; border-bottom: 1px solid var(--rule); position: sticky; top: 0; background: var(--paper); z-index: 1; }
-.kinds .lbl { width: 100%; font-size: 12px; color: var(--ink-2); letter-spacing: .08em; }
-.k { display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border: 1px solid var(--rule); border-radius: 999px; background: none; font-size: 12.5px; line-height: 1.7; }
+@media (max-width: 979px) { .shell.has-sel .list { display: none; } .shell:not(.has-sel) .case { display: none; } }
+.list { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); min-width: 0; }
+.kinds { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--card); z-index: 1; }
+.kinds .lbl { width: 100%; font-size: 12px; font-weight: 500; color: var(--ink-2); letter-spacing: .08em; }
+.k { display: inline-flex; align-items: center; gap: 6px; padding: 1px 10px; border: 1px solid var(--line); border-radius: 999px; background: none; font-size: 13px; line-height: 1.75; }
 .k i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
 .k b { font: 500 11.5px var(--mono); color: var(--ink-2); }
 .k[aria-pressed="true"] { background: var(--cw); border-color: var(--c); color: var(--ink); }
 .k-disclosed { --c: var(--red); --cw: var(--red-wash); } .k-similar { --c: var(--amber); --cw: var(--amber-wash); }
-.k-rule { --c: var(--blue); --cw: var(--blue-wash); } .k-mismatch { --c: var(--teal); --cw: var(--teal-wash); }
-.k-style { --c: var(--ink-2); --cw: var(--mark-dim); }
-.group { margin: 0; padding: 10px 14px 6px; font-size: 12px; letter-spacing: .1em; color: var(--ink-2); display: flex; justify-content: space-between; }
+.k-rule { --c: var(--accent); --cw: var(--accent-wash); } .k-mismatch { --c: var(--teal); --cw: var(--teal-wash); }
+.k-style { --c: var(--ink-2); --cw: var(--bg); }
+.group { margin: 0; padding: 12px 16px 6px; font-size: 12px; font-weight: 500; letter-spacing: .1em; color: var(--ink-2); display: flex; justify-content: space-between; }
 .rows { list-style: none; margin: 0; padding: 0; }
-.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; width: 100%; padding: 10px 14px; text-align: left; border: 0; border-top: 1px solid var(--rule); background: none; }
-.row:hover { background: var(--mark-dim); }
-.row[aria-current="true"] { background: var(--blue-wash); }
-.row .who { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; width: 100%; padding: 11px 16px; text-align: left; border: 0; border-top: 1px solid var(--line); background: none; }
+.row:hover { background: var(--bg); }
+.row[aria-current="true"] { background: var(--accent-wash); }
+.row .who { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
 .sid { font: 500 14.5px var(--mono); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .nm { color: var(--ink-2); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row .sum { grid-column: 1 / -1; margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.row .sum { grid-column: 1 / -1; margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .row .dots { display: flex; gap: 4px; align-items: center; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
-.dot.k-disclosed { background: var(--red); } .dot.k-similar { background: var(--amber); } .dot.k-rule { background: var(--blue); }
+.dot.k-disclosed { background: var(--red); } .dot.k-similar { background: var(--amber); } .dot.k-rule { background: var(--accent); }
 .dot.k-mismatch { background: var(--teal); } .dot.k-style { background: var(--ink-2); }
-.pill { display: inline-block; padding: 0 8px; border-radius: 4px; font-size: 12px; line-height: 1.75; white-space: nowrap; letter-spacing: .04em; }
-.pill-verify { background: var(--red); color: var(--paper); font-weight: 600; }
+.pill { display: inline-block; padding: 0 9px; border-radius: 6px; font-size: 12px; line-height: 1.8; white-space: nowrap; font-weight: 500; }
+.pill-verify { background: var(--red); color: var(--card); font-weight: 700; }
 .pill-follow_up { background: var(--amber-wash); color: var(--amber); border: 1px solid var(--amber); }
-.pill-normal { color: var(--ink-2); border: 1px solid var(--rule); }
-.none { padding: 24px 14px; color: var(--ink-2); }
+.pill-normal { color: var(--ink-2); border: 1px solid var(--line); }
+.none { padding: 28px 16px; color: var(--ink-2); }
 
 /* —— 案卷 —— */
-.case { background: var(--paper); border-radius: 3px; box-shadow: var(--shadow); padding: clamp(18px, 3vw, 36px); min-width: 0; }
-.back { display: none; margin-bottom: 12px; border: 1px solid var(--rule); background: none; border-radius: 6px; padding: 4px 12px; }
-@media (max-width: 959px) { .back { display: inline-block; } }
-.case-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px 20px; padding-bottom: 14px; border-bottom: 3px double var(--ink); }
-.eyebrow { margin: 0 0 4px; font-size: 12px; letter-spacing: .14em; color: var(--ink-2); }
-h1, h2, h3 { margin: 0; text-wrap: balance; }
-.case-head h2 { font: 700 clamp(22px, 2.6vw, 28px)/1.25 var(--serif); }
-.case-head h2 small { font: 400 15px var(--sans); color: var(--ink-2); margin-left: 8px; }
+.case { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: clamp(20px, 3vw, 38px); min-width: 0; }
+.back { display: none; margin-bottom: 14px; border: 1px solid var(--line); background: none; border-radius: 8px; padding: 5px 13px; }
+@media (max-width: 979px) { .back { display: inline-block; } }
+.case-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.eyebrow { margin-bottom: 4px; font-size: 12px; font-weight: 500; letter-spacing: .12em; color: var(--ink-2); }
+.case-head h2 { font-size: clamp(22px, 2.6vw, 28px); line-height: 1.3; font-weight: 700; }
+.case-head h2 .sidn { font: 500 .92em var(--mono); letter-spacing: .01em; margin-right: 10px; }
+.case-head .sub { margin-top: 2px; color: var(--ink-2); font-size: 13.5px; }
 .case-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.btn { border: 1px solid var(--rule); background: var(--paper); border-radius: 6px; padding: 4px 12px; font-size: 14px; text-decoration: none; color: var(--ink); display: inline-block; }
-.btn:hover { border-color: var(--blue); color: var(--blue); }
-.btn:disabled { opacity: .35; cursor: default; border-color: var(--rule); color: inherit; }
-.verdict { margin: 16px 0 0; display: flex; gap: 12px; align-items: baseline; font: 16.5px/1.8 var(--serif); }
-.verdict .pill { flex: none; font-family: var(--sans); font-size: 13px; }
-.signals { display: grid; gap: 22px; margin: 22px 0 0; }
-.signal { display: grid; gap: 10px; min-width: 0; }
-.sig-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.kchip { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 4px; font-size: 13px; line-height: 1.8; font-weight: 600; background: var(--cw); color: var(--ink); border: 1px solid var(--c); }
+.btn { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 5px 13px; font-size: 14px; text-decoration: none; color: var(--ink); display: inline-block; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn:disabled { opacity: .35; cursor: default; border-color: var(--line); color: inherit; }
+.verdict { margin: 20px 0 0; display: flex; gap: 12px; align-items: baseline; font-size: 17px; line-height: 1.8; font-weight: 500; }
+.verdict .pill { flex: none; font-size: 13px; }
+.signals { display: grid; gap: 30px; margin: 26px 0 0; }
+.signal { display: grid; gap: 12px; min-width: 0; padding-top: 22px; border-top: 1px solid var(--line); }
+.signal:first-child { border-top: 0; padding-top: 0; }
+.sig-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.kchip { display: inline-flex; align-items: center; gap: 7px; padding: 0 11px; border-radius: 6px; font-size: 13px; line-height: 1.85; font-weight: 700; background: var(--cw); color: var(--ink); border: 1px solid var(--c); }
 .kchip i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
-.loc { font: 12.5px var(--mono); color: var(--ink-2); }
-.snip { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; font: 13px/1.65 var(--mono); }
-.snip-in { display: block; width: max-content; min-width: 100%; padding-block: 3px; }
-.ln-row { display: flex; white-space: pre; }
-.ln-row .no { flex: 0 0 3em; padding-right: .9em; text-align: right; color: var(--ink-2); opacity: .7; user-select: none; font-variant-numeric: tabular-nums; }
-.ln-row .src { padding-right: 14px; }
-.ln-row.ctx { opacity: .55; }
-.ln-row.hit { background: var(--mark); }
-.obs { margin: 0; font-size: 15px; line-height: 1.75; }
-.ic { font: .88em var(--mono); background: var(--blue-wash); padding: 1px 5px; border-radius: 3px; }
-.ask .ic { background: var(--paper); }
+.loc { font: 500 12.5px var(--mono); color: var(--ink-2); }
+.obs { font-size: 15.5px; line-height: 1.85; }
 .obs a { font-family: var(--mono); font-size: .93em; text-underline-offset: 2px; }
-.ask { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: start; padding: 10px 14px; background: var(--blue-wash); border-radius: 6px; }
-.ask-l { font-size: 12px; letter-spacing: .12em; color: var(--blue); font-weight: 700; padding-top: 3px; white-space: nowrap; }
-.ask p { margin: 0; font: 15.5px/1.7 var(--serif); }
-.copy { border: 0; background: none; color: var(--blue); font-size: 13px; padding: 2px 4px; white-space: nowrap; }
+.ask { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 14px; align-items: start; padding: 12px 16px; background: var(--accent-wash); border-radius: 10px; }
+.ask-l { font-size: 12px; letter-spacing: .12em; color: var(--accent); font-weight: 700; padding-top: 3px; white-space: nowrap; }
+.ask p { font-size: 15.5px; line-height: 1.75; }
+.ask .ic { background: var(--card); }
+.copy { border: 0; background: none; color: var(--accent); font-size: 13px; padding: 2px 4px; white-space: nowrap; }
 .copy:hover { text-decoration: underline; }
-.fams { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 14px; }
-.fams h3 { font: 600 13px var(--sans); letter-spacing: .1em; color: var(--ink-2); margin-bottom: 8px; }
+.fams { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 14px; }
+.fams h3 { font-size: 12.5px; font-weight: 500; letter-spacing: .1em; color: var(--ink-2); margin-bottom: 8px; }
 .fam-links { display: flex; flex-wrap: wrap; gap: 6px; }
-details.code { margin-top: 20px; border-top: 1px solid var(--rule); padding-top: 12px; }
-details.code summary { cursor: pointer; color: var(--blue); font-size: 14px; }
-.file-name { margin: 16px 0 6px; font: 600 13px var(--mono); }
-.caveat { margin: 28px 0 0; padding: 10px 14px; border-radius: 6px; background: var(--amber-wash); color: var(--amber); font-size: 13.5px; line-height: 1.7; }
+details.code { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); }
+details.code > summary { cursor: pointer; color: var(--accent); font-size: 14px; width: max-content; }
+details.code .cb { margin-top: 12px; }
+details.code .cb-body { --cb-max: 420px; }
+.caveat { margin: 30px 0 0; padding: 12px 16px; border-radius: 10px; background: var(--amber-wash); color: var(--amber); font-size: 13.5px; line-height: 1.75; }
 
 /* —— 说明页（未选学生时）—— */
-.intro h2 { font: 700 clamp(22px, 2.6vw, 28px)/1.3 var(--serif); }
-.intro .lead { margin: 10px 0 0; max-width: 62ch; font: 16.5px/1.85 var(--serif); }
-.legend { display: grid; gap: 12px; margin: 22px 0 0; padding: 0; list-style: none; }
-.legend li { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 4px 12px; align-items: baseline; }
-.tally { display: flex; flex-wrap: wrap; margin: 24px 0 0; background: var(--desk); border-radius: 8px; }
-.tally div { padding: 8px 18px 9px; border-left: 1px solid var(--rule); }
+.intro h2 { font-size: clamp(22px, 2.6vw, 28px); line-height: 1.35; font-weight: 700; }
+.intro .lead { margin: 12px 0 0; max-width: 60ch; font-size: 16.5px; line-height: 1.85; }
+.legend { display: grid; gap: 14px; margin: 24px 0 0; padding: 0; list-style: none; }
+.legend li { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 4px 14px; align-items: baseline; }
+.tally { display: flex; flex-wrap: wrap; margin: 26px 0 0; background: var(--bg); border-radius: 10px; }
+.tally div { padding: 9px 20px 10px; border-left: 1px solid var(--line); }
 .tally div:first-child { border-left: 0; }
 .tally dt { font-size: 12px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
-.tally dd { margin: 2px 0 0; font: 600 22px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.tally dd { margin: 2px 0 0; font: 600 22px/1.15 var(--mono); font-variant-numeric: tabular-nums; }
 .empty-note { margin: 22px 0 0; color: var(--ink-2); font-size: 14px; }
 
 /* —— 写法家族 —— */
-.fam-view { grid-column: 1 / -1; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); align-items: start; }
-.fam { background: var(--paper); border-radius: 3px; box-shadow: var(--shadow); padding: 20px 22px; display: grid; gap: 12px; min-width: 0; }
-.fam h3 { font: 700 18px/1.4 var(--serif); }
+.fam-view { grid-column: 1 / -1; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 480px), 1fr)); align-items: start; }
+.fam { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 22px 24px; display: grid; gap: 14px; min-width: 0; }
+.fam h3 { font-size: 17px; line-height: 1.45; font-weight: 700; }
 .fam-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.str { flex: none; font-size: 12px; line-height: 1.8; padding: 0 8px; border-radius: 4px; border: 1px solid var(--rule); color: var(--ink-2); }
-.str-strong { background: var(--red); border-color: var(--red); color: var(--paper); font-weight: 600; }
+.str { flex: none; font-size: 12px; line-height: 1.85; padding: 0 9px; border-radius: 6px; border: 1px solid var(--line); color: var(--ink-2); font-weight: 500; }
+.str-strong { background: var(--red); border-color: var(--red); color: var(--card); font-weight: 700; }
 .str-medium { background: var(--amber-wash); border-color: var(--amber); color: var(--amber); }
-.fam p { margin: 0; font-size: 14.5px; line-height: 1.75; }
+.fam p { font-size: 14.5px; line-height: 1.8; }
 .members { display: flex; flex-wrap: wrap; gap: 6px; }
-.member { display: inline-flex; gap: 6px; align-items: baseline; padding: 1px 9px; border: 1px solid var(--rule); border-radius: 4px; background: none; font-size: 13px; }
+.member { display: inline-flex; gap: 7px; align-items: baseline; padding: 1px 10px; border: 1px solid var(--line); border-radius: 6px; background: none; font-size: 13px; }
 .member .sid { font-size: 13px; }
-.member:hover { border-color: var(--blue); background: var(--blue-wash); }
-.example { font-size: 12px; color: var(--ink-2); margin: 0; }
-details.pairs { grid-column: 1 / -1; background: var(--paper); border-radius: 3px; box-shadow: var(--shadow); padding: 14px 22px; }
+.member:hover { border-color: var(--accent); background: var(--accent-wash); }
+.example { font-size: 12px; color: var(--ink-2); }
+details.pairs { grid-column: 1 / -1; background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 16px 24px; }
 details.pairs summary { cursor: pointer; font-size: 14px; }
-.pair { padding: 10px 0; border-top: 1px solid var(--rule); font-size: 13.5px; margin-top: 10px; }
-.pair code { font: 12.5px var(--mono); }
-.foot { max-width: 1360px; margin: 0 auto; padding: 0 16px 40px; color: var(--ink-2); font-size: 13px; }
+.pair { padding: 12px 0; border-top: 1px solid var(--line); font-size: 13.5px; margin-top: 12px; }
+.pair code { font: 500 12.5px var(--mono); }
+.foot { max-width: 1400px; margin: 0 auto; padding: 0 20px 40px; color: var(--ink-2); font-size: 13px; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 </style>
@@ -201,6 +190,7 @@ details.pairs summary { cursor: pointer; font-size: 14px; }
 <p class="foot" id="foot"></p>
 <script id="data" type="application/json">__DATA__</script>
 <script>
+//__SHARED_JS__
 const D = JSON.parse(document.getElementById("data").textContent);
 const S = D.students, R = D.reviews, FAM = D.families || [], PAIRS = D.similar || [];
 const $ = id => document.getElementById(id);
@@ -214,25 +204,9 @@ const withCode = Object.keys(S).filter(id => S[id].files.length);
 const noCode = Object.keys(S).filter(id => !S[id].files.length);
 const state = { tab: "all", kinds: new Set(), q: "", sel: null };
 
-function el(tag, attrs, ...kids) {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (v === null || v === undefined || v === false) continue;
-    if (k === "class") e.className = v;
-    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
-    else e.setAttribute(k, v === true ? "" : v);
-  }
-  for (const kid of kids.flat(Infinity)) if (kid !== null && kid !== undefined && kid !== false) e.append(kid);
-  return e;
-}
-function short(id) {      // 12611912 刘晓明(Liu Xiaoming) 通识通修 → 刘晓明
-  const t = (S[id].name || "").replace(/[（(].*?[)）]/g, " ").trim().split(/\s+/).filter(Boolean);
-  if (t.length > 1 && /^[一-鿿]+$/.test(t[t.length - 1])) t.pop();
-  return t.join(" ");
-}
+const short = id => parseName(S[id].name).short;
 const kindsOf = id => KIND_ORDER.filter(k => (R[id]?.signals || []).some(s => s.kind === k));
 const pill = p => el("span", { class: "pill pill-" + p }, PRI[p]);
-const put = (node, ...kids) => node.replaceChildren(...kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false));
 function fmt(text) {       // `代码` → 等宽字；其余文字里的学号 → 链接
   return String(text).split(/`([^`\n]+)`/).map((part, i) => i % 2 ? el("code", { class: "ic" }, part) : linkify(part));
 }
@@ -255,7 +229,7 @@ function visible() {
   const q = state.q.trim().toLowerCase();
   return ordered(withCode.filter(id => R[id] && inTab(id)
     && (!state.kinds.size || kindsOf(id).some(k => state.kinds.has(k)))
-    && (!q || id.includes(q) || short(id).toLowerCase().includes(q))));
+    && (!q || id.includes(q) || (S[id].name || "").toLowerCase().includes(q))));
 }
 const count = p => withCode.filter(id => R[id] && (p === "all" ? R[id].priority !== "normal" : R[id].priority === p)).length;
 
@@ -263,7 +237,7 @@ const count = p => withCode.filter(id => R[id] && (p === "all" ? R[id].priority 
 function renderTabs() {
   const tabs = [["all", "优先查看", count("all")], ["verify", "需核实", count("verify")], ["follow_up", "建议追问", count("follow_up")],
     ["normal", "无明显线索", count("normal")], ["fam", "写法与雷同", FAM.length]];
-  $("tabs").replaceChildren(...tabs.map(([key, label, n]) =>
+  put($("tabs"), tabs.map(([key, label, n]) =>
     el("button", { class: "tab", role: "tab", "aria-selected": String(state.tab === key), onclick: () => setTab(key) }, label, el("b", {}, String(n)))));
 }
 function setTab(tab) {
@@ -291,37 +265,27 @@ function renderList() {
       last = p;
     }
     body.push(el("li", {}, el("button", { class: "row", type: "button", "data-id": id, "aria-current": String(state.sel === id), onclick: () => open(id) },
-      el("span", { class: "who" }, el("span", { class: "sid" }, id), el("span", { class: "nm" }, short(id))),
+      el("span", { class: "who" }, el("span", { class: "sid" }, id), el("span", { class: "nm", title: S[id].name }, short(id))),
       el("span", { class: "dots" }, kindsOf(id).map(k => el("i", { class: `dot k-${k}`, title: KIND[k] })), pill(p)),
       el("p", { class: "sum" }, fmt(R[id].summary)))));
   }
-  $("list").replaceChildren(
+  put($("list"),
     el("div", { class: "kinds" }, el("span", { class: "lbl" }, "按线索类型筛选"), kindBtns),
     ids.length ? el("ol", { class: "rows" }, body) : el("p", { class: "none" }, "没有符合条件的学生。可以取消上面的筛选，或换一个标签。"));
 }
 
-/* —— 证据：真实的代码行 —— */
+/* —— 证据：真实的代码行（用共享的代码组件）—— */
 function snippet(sid, ref) {
   const i = ref.lastIndexOf(":"), name = ref.slice(0, i), [a, b] = ref.slice(i + 1).split("-").map(Number), hi = b || a;
   const file = S[sid].files.find(f => f.name === name);
   if (!file) return null;
-  const lines = file.code.replace(/\n$/, "").split("\n");
-  const from = Math.max(1, a - 2), to = Math.min(lines.length, hi + 2);
-  const rows = [];
-  for (let n = from; n <= to; n++) {
-    rows.push(el("div", { class: "ln-row " + (n >= a && n <= hi ? "hit" : "ctx") }, el("span", { class: "no" }, String(n)), el("span", { class: "src" }, lines[n - 1] || " ")));
-  }
-  return el("div", { class: "snip" }, el("div", { class: "snip-in" }, rows));
-}
-function copyText(text, btn) {
-  const done = label => { btn.textContent = label; setTimeout(() => (btn.textContent = "复制"), 1400); };
-  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => done("已复制"), () => done("请手动选中"));
+  return codeBlock({ name, code: file.code, from: a - 2, to: hi + 2, hits: new Set(Array.from({ length: hi - a + 1 }, (_, k) => a + k)), dim: true, compact: true });
 }
 
 /* —— 案卷 —— */
 function renderIntro() {
   const kindCount = k => withCode.filter(id => R[id] && kindsOf(id).includes(k)).length;
-  $("case").replaceChildren(el("div", { class: "intro" },
+  put($("case"), el("div", { class: "intro" },
     el("p", { class: "eyebrow" }, `${TITLE} · 共 ${Object.keys(S).length} 人，${withCode.length} 人有可读代码`),
     el("h2", {}, "从名单里选一位学生，看他的线索"),
     el("p", { class: "lead" }, "每条线索都指向一段真实的代码，旁边写着为什么值得问，以及一句可以直接当面问的话。名单按「自述用 AI」「与他人雷同」等较硬的证据排在前面。"),
@@ -338,45 +302,40 @@ function caveat() {
   return el("p", { class: "caveat" }, "仅凭代码无法判断是否使用了 AI。这么短、写法又被题意固定的程序，AI 写的和同学自己写的可能一模一样；这里列的都是能在代码里逐行核对的线索，用来决定先问谁、问什么，不是结论。自述用 AI 算不算违规，要看 Blackboard 上发布的 AI 使用政策。");
 }
 function renderCase(sid) {
-  const r = R[sid], s = S[sid];
+  const r = R[sid], s = S[sid], nm = parseName(s.name);
   const list = visible(), at = list.indexOf(sid);
-  const fams = FAM.map((f, i) => [f, i]).filter(([f]) => f.members.includes(sid));
+  const fams = FAM.filter(f => f.members.includes(sid));
   const step = d => { const t = list[at + d]; if (t) open(t); };
   put($("case"),
     el("button", { class: "back", type: "button", onclick: () => { state.sel = null; location.hash = ""; render(); } }, "← 回到名单"),
     el("header", { class: "case-head" },
-      el("div", {}, el("p", { class: "eyebrow" }, "学生"), el("h2", {}, sid, el("small", {}, short(sid)))),
+      el("div", {}, el("p", { class: "eyebrow" }, "学生"),
+        el("h2", {}, el("span", { class: "sidn" }, sid), nm.short),
+        nm.en || nm.dept ? el("p", { class: "sub" }, [nm.zh && nm.en, nm.dept].filter(Boolean).join(" · ")) : null),
       el("div", { class: "case-tools" },
         el("button", { class: "btn", type: "button", disabled: at <= 0, onclick: () => step(-1) }, "‹ 上一位"),
         el("button", { class: "btn", type: "button", disabled: at < 0 || at >= list.length - 1, onclick: () => step(1) }, "下一位 ›"),
         s.has_paper ? el("a", { class: "btn", href: "quiz.html#" + sid }, "对应抽查题 →") : null)),
     el("p", { class: "verdict" }, pill(r.priority), el("span", {}, fmt(r.summary))),
     r.stale ? el("p", { class: "caveat" }, "这位同学的代码在评审之后改过，线索可能已经对不上，请重新评审。") : null,
-    r.signals.length ? el("div", { class: "signals" }, r.signals.map(sg => {
-      const code = snippet(sid, sg.ref);
-      return el("section", { class: `signal k-${sg.kind}`, style: "" },
+    r.signals.length ? el("div", { class: "signals" }, r.signals.map(sg =>
+      el("section", { class: `signal k-${sg.kind}` },
         el("div", { class: "sig-head" }, el("span", { class: `kchip k-${sg.kind}` }, el("i"), KIND[sg.kind]), el("code", { class: "loc" }, sg.ref)),
-        code,
+        snippet(sid, sg.ref),
         el("p", { class: "obs" }, fmt(sg.observation)),
         el("div", { class: "ask" }, el("span", { class: "ask-l" }, "建议问"), el("p", {}, fmt(sg.ask)),
-          el("button", { class: "copy", type: "button", onclick: e => copyText(sg.ask, e.currentTarget) }, "复制")));
-    })) : el("p", { class: "empty-note" }, "没有需要追问的线索。"),
-    fams.length ? el("div", { class: "fams" }, el("h3", {}, "同类写法"), el("div", { class: "fam-links" }, fams.map(([f]) =>
+          el("button", { class: "copy", type: "button", onclick: e => copyText(sg.ask, e.currentTarget) }, "复制"))))) : el("p", { class: "empty-note" }, "没有需要追问的线索。"),
+    fams.length ? el("div", { class: "fams" }, el("h3", {}, "同类写法"), el("div", { class: "fam-links" }, fams.map(f =>
       el("button", { class: "member", type: "button", onclick: () => setTab("fam") }, f.title)))) : null,
     el("details", { class: "code" }, el("summary", {}, `查看全部代码（${s.files.length} 个文件）`),
-      s.files.map(f => [el("p", { class: "file-name" }, f.name), snippet2(f)])),
+      s.files.map(f => codeBlock({ name: f.name, code: f.code }))),
     caveat());
-}
-function snippet2(file) {
-  const lines = file.code.replace(/\n$/, "").split("\n");
-  return el("div", { class: "snip" }, el("div", { class: "snip-in" }, lines.map((l, i) =>
-    el("div", { class: "ln-row" }, el("span", { class: "no" }, String(i + 1)), el("span", { class: "src" }, l || " ")))));
 }
 
 /* —— 写法家族 —— */
 function renderFamilies() {
-  const strong = { strong: 0, medium: 1, weak: 2 };
-  const cards = FAM.slice().sort((a, b) => strong[a.strength] - strong[b.strength]).map(f => {
+  const order = { strong: 0, medium: 1, weak: 2 };
+  const cards = FAM.slice().sort((a, b) => order[a.strength] - order[b.strength]).map(f => {
     const ex = f.example && S[f.example.sid] ? snippet(f.example.sid, f.example.ref) : null;
     return el("section", { class: "fam" },
       el("div", { class: "fam-top" }, el("h3", {}, f.title), el("span", { class: "str str-" + f.strength }, STR[f.strength])),

@@ -116,6 +116,7 @@ TA 想知道谁可能用了 AI 时，**不要凭「写得太好」下判断**：
 4. **整理写法家族**（可选）`<ws>/families.json`：`[{"title", "strength": "strong|medium|weak", "note", "members": [学号], "example": {"sid", "ref"}}]`，
    把多人共有的做法（逐行相同的程序、同一种超纲写法、同一个小技巧）归到一起，写明各有多少人自述用了 AI，让 TA 看到整体。
 
-最后 `python3 <skill>/scripts/build.py <ws>` 会同时检查 `reviews/`、`families.json`，并生成 `<ws>/review.html`：
+最后 `python3 <skill>/scripts/build.py <ws>` 会同时检查 `reviews/`、`families.json`，并生成 `<ws>/review.html`
+（两个页面都把字体和代码组件嵌在文件里，不需要联网；改页面样式时改 `assets/` 下的模板、`shared.css`、`shared.js`，不要在页面里再引外部字体）：
 名单按「需核实 / 建议追问」排序，可按线索类型筛选；点开一位学生看到真实代码行、原因和可以直接问的话，并能跳到他的抽查题；
 另有一个「写法与雷同」标签页。把结果告诉 TA 时说清：这是线索不是结论，自述用 AI 算不算违规要看 Blackboard 上的 AI 使用政策。

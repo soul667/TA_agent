@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import base64
 import json
 import re
 import sys
@@ -145,9 +146,30 @@ def load_dir(root: Path, folder: str, students: dict, checker) -> tuple[dict, li
     return good, problems, stale
 
 
+FONTS = {"TASans-Regular": ("TA Sans", 400), "TASans-Bold": ("TA Sans", 700),
+         "TAMono-Regular": ("TA Mono", 400), "TAMono-Medium": ("TA Mono", 500), "TAMono-Bold": ("TA Mono", 700)}
+
+
+def fonts_css() -> str:
+    """把 assets/fonts 里的字体子集以 data: URI 写进页面，在任何电脑、任何查看器里字形一致（离线也行）。"""
+    rules = []
+    for stem, (family, weight) in FONTS.items():
+        path = ASSETS / "fonts" / f"{stem}.woff2"
+        if path.exists():
+            b64 = base64.b64encode(path.read_bytes()).decode("ascii")
+            rules.append(f'@font-face{{font-family:"{family}";font-weight:{weight};font-style:normal;font-display:swap;'
+                         f'src:url(data:font/woff2;base64,{b64}) format("woff2")}}')
+    return "\n".join(rules)
+
+
 def render(template: str, payload: dict) -> str:
     data = json.dumps(payload, ensure_ascii=False).replace("<", "\\u003c")
-    return (ASSETS / template).read_text(encoding="utf-8").replace("__DATA__", data)
+    page = (ASSETS / template).read_text(encoding="utf-8")
+    for marker, text in (("/*__FONTS__*/", fonts_css()),
+                         ("/*__SHARED_CSS__*/", (ASSETS / "shared.css").read_text(encoding="utf-8")),
+                         ("//__SHARED_JS__", (ASSETS / "shared.js").read_text(encoding="utf-8"))):
+        page = page.replace(marker, text)
+    return page.replace("__DATA__", data)    # 数据最后替换，学生代码里出现什么字样都不会被当成占位符
 
 
 def build(root: Path) -> tuple[str, bool]:

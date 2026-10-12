@@ -50,9 +50,15 @@ cp -r .claude/skills/ta-quiz ~/.claude/skills/
 ├── scripts/unpack.py   拆 ZIP → 每人一份带行号的代码（只读文本，不运行学生文件）
 ├── scripts/similar.py  找出代码雷同的学生对（只看全班罕见的共同行）
 ├── scripts/build.py    检查题目和线索的格式 → 生成 quiz.html、review.html
-└── assets/             quiz.html、review.html 页面模板
+└── assets/
+    ├── quiz.html、review.html   两个页面的模板
+    ├── shared.css、shared.js    共用的代码组件（C 语法高亮、行号、被问到的行高亮、复制）和字体栈
+    └── fonts/                   嵌进页面的字体子集（思源黑体 + JetBrains Mono，OFL 许可），离线也一致
 examples/demo.zip       示例作业包
 tests/test_skill.py     python3 -m unittest discover tests
 ```
+
+页面是单个 HTML 文件，字体直接嵌在里面（约 2MB），在任何电脑、任何查看器里字形都一样，不依赖网络。
+字体子集只含 ASCII 和 GB2312 一级汉字，姓名里的生僻字会退回系统的无衬线中文字体。
 
 `workspace/` 里有学生的姓名、学号和代码，不要提交或上传到别处。

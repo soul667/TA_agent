@@ -280,5 +280,38 @@ class ReviewTest(Case):
         self.assertEqual(similar.compare(students, min_shared=3, rare=1), [])
 
 
+class PageTest(Case):
+    """页面生成：字体和共享代码组件被嵌入，学生代码里的占位符字样不会破坏页面。"""
+
+    def test_fonts_and_shared_code_are_embedded_and_data_is_safe(self):
+        code = '/*__FONTS__*/\nchar *s = "__DATA__ </script> //__SHARED_JS__";\nint main(){}\n'
+        ws, students = self.run_unpack({bb("12610001", "main.c"): code})
+        (ws / "papers").mkdir()
+        paper = {**GOOD, "fingerprint": students["12610001"]["fingerprint"]}
+        (ws / "papers/12610001.json").write_text(json.dumps(paper, ensure_ascii=False), encoding="utf-8")
+        (ws / "reviews").mkdir()
+        report, ok = build.build(ws)
+        self.assertTrue(ok, report)
+        for name in ("quiz.html", "review.html"):
+            html = (ws / name).read_text(encoding="utf-8")
+            template, rest = html.split('<script id="data" type="application/json">')
+            data, scripts = rest.split("</script>", 1)
+            for marker in ("/*__SHARED_CSS__*/", "//__SHARED_JS__", "/*__FONTS__*/", "__DATA__"):
+                self.assertNotIn(marker, template + scripts, f"{name} 里还有未替换的占位符 {marker}")
+            self.assertEqual(html.count("@font-face"), 5, name)
+            self.assertIn('font-family:"TA Sans"', html)
+            self.assertIn("function codeBlock", html)
+            self.assertIn("function highlightC", html)
+            self.assertEqual(json.loads(data)["students"]["12610001"]["files"][0]["code"], code.replace("\r\n", "\n"))
+            self.assertNotIn("</script> //__SHARED_JS__", html)   # 学生代码里的 </script> 被转义，不会提前结束数据块
+            self.assertIn("__DATA__", data)                      # 学生代码里的占位符字样原样保留在数据里
+
+    def test_all_font_files_exist(self):
+        assets = SCRIPTS.parent / "assets"
+        for stem in build.FONTS:
+            self.assertGreater((assets / "fonts" / f"{stem}.woff2").stat().st_size, 1000, stem)
+        self.assertTrue((assets / "fonts" / "LICENSE-OFL.txt").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
